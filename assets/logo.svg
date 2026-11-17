@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="VRA+">
+  <defs>
+    <linearGradient id="vra-shield" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <path d="M16 2.5 4.5 6.8v8.3c0 7.3 4.9 12.5 11.5 14.4 6.6-1.9 11.5-7.1 11.5-14.4V6.8L16 2.5Z" fill="url(#vra-shield)"/>
+  <path d="M16 10.2v10.6M10.7 15.5h10.6" stroke="#F4F8FF" stroke-width="3" stroke-linecap="round"/>
+</svg>

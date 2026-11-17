@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VRA+ — Find it. Fix it. Prove it.</title>
+  <meta name="description" content="VRA+ by Rebellis scans your code, dependencies, containers and infrastructure, then opens GitHub pull requests or GitLab merge requests with fixes verified by your own build. Free, deterministic, no AI, no API key." />
+  <meta property="og:title" content="VRA+ — Vulnerability Remediation Automation" />
+  <meta property="og:description" content="Scan, fix and prove it. Pull requests with security fixes verified by your own build — free, deterministic, one binary." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="VRA+" />
+  <meta property="og:url" content="https://vra-plus.io/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="theme-color" content="#070D18" />
+  <link rel="canonical" href="https://vra-plus.io/" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script>document.documentElement.classList.add('js')</script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VRA+",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Linux, macOS, Windows",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "publisher": { "@type": "Organization", "name": "Rebellis" },
+    "url": "https://vra-plus.io/"
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- ─── Navigation ─────────────────────────────────────────────── -->
+  <header class="nav" id="top">
+    <div class="wrap nav__inner">
+      <a class="brand" href="#top" aria-label="VRA+ home">
+        <img src="assets/logo.svg" alt="" width="30" height="30" />
+        <span class="brand__name">VRA<span class="plus">+</span></span>
+        <span class="brand__by">by Rebellis</span>
+      </a>
+      <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Menu">
+        <span></span><span></span>
+      </button>
+      <nav class="nav__links" id="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#fixes">What it fixes</a>
+        <a href="#verify">Verification</a>
+        <a href="#ci">CI/CD</a>
+        <a class="btn btn--sm btn--primary" href="#install">Get the CLI</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ─── Hero ──────────────────────────────────────────────────── -->
+    <section class="hero">
+      <canvas id="network-canvas" aria-hidden="true"></canvas>
+      <div class="wrap hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow"><span class="dot"></span> Free · deterministic · no AI, no API key</p>
+          <h1>Find it. Fix it.<br /><span class="grad">Prove it.</span></h1>
+          <p class="lead">
+            VRA+ scans your code, dependencies, containers and infrastructure — then opens
+            pull or merge requests with fixes that <strong>your own build and tests</strong> have already verified.
+            What it can't fix safely, it hands to a human with the failure attached.
+          </p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="#install">Install VRA+</a>
+            <a class="btn btn--ghost" href="#how">See how it works</a>
+          </div>
+          <ul class="hero__facts">
+            <li><strong>1</strong> binary</li>
+            <li><strong>3</strong> scanners inside</li>
+            <li><strong>9</strong> package ecosystems</li>
+            <li><strong>0</strong> dependencies to install</li>
+          </ul>
+        </div>
+
+        <div class="terminal reveal" aria-label="Example VRA+ session">
+          <div class="terminal__bar">
+            <span></span><span></span><span></span>
+            <p>~/my-app</p>
+          </div>
+<pre class="terminal__body"><code><span class="t-line"><span class="t-prompt">$</span> vra scan --scanner all .</span>
+<span class="t-line t-dim">  trivy · semgrep · checkov  ──  63 findings</span>
+<span class="t-line">  <span class="t-crit">CRITICAL 1</span>  <span class="t-high">HIGH 25</span>  <span class="t-med">MEDIUM 37</span></span>
+<span class="t-line"> </span>
+<span class="t-line"><span class="t-prompt">$</span> vra remediate --open-pr</span>
+<span class="t-line">  <span class="t-ok">✓</span> requests 2.25.1 → 2.33.0   <span class="t-dim">build + tests pass</span></span>
+<span class="t-line">  <span class="t-ok">✓</span> lodash 4.17.15 → 4.18.0    <span class="t-dim">npm build + test pass</span></span>
+<span class="t-line">  <span class="t-ok">✓</span> Dockerfile: run as non-root <span class="t-dim">image builds</span></span>
+<span class="t-line">  <span class="t-ok">✓</span> pin actions/checkout to SHA</span>
+<span class="t-line">  <span class="t-warn">✗</span> PyJWT 1.7.1 → 2.14.0      <span class="t-dim">tests fail → draft</span></span>
+<span class="t-line"> </span>
+<span class="t-line">  <span class="t-accent">→</span> PR    fix 40 security findings</span>
+<span class="t-line">  <span class="t-accent">→</span> draft needs manual fix — PyJWT</span>
+<span class="t-line">  <span class="t-accent">→</span> issue hardcoded secrets need rotation</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Engines strip ─────────────────────────────────────────── -->
+    <section class="strip" aria-label="Bundled scanners">
+      <div class="wrap strip__inner">
+        <p>One self-contained binary — the scanners ship inside it</p>
+        <ul>
+          <li><span class="chip">Trivy</span> dependencies · images · secrets</li>
+          <li><span class="chip">Semgrep</span> source code (SAST)</li>
+          <li><span class="chip">Checkov</span> IaC · Dockerfiles · CI configs</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ─── How it works ──────────────────────────────────────────── -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <header class="section__head reveal">
+          <p class="kicker">How it works</p>
+          <h2>From finding to merged fix, without the guesswork</h2>
+          <p>Scanners are good at telling you what's wrong. VRA+ does the next part: it changes the code, proves the change is safe, and delivers it for review.</p>
+        </header>
+        <ol class="steps">
+          <li class="step reveal">
+            <span class="step__num">01</span>
+            <h3>Scan</h3>
+            <p>Trivy, Semgrep and Checkov run together; findings are normalised, de-duplicated and grouped by type — SCA, SAST, IaC, secrets.</p>
+            <code>vra scan</code>
+          </li>
+          <li class="step reveal">
+            <span class="step__num">02</span>
+            <h3>Fix</h3>
+            <p>Each finding with a known, rule-based fix is applied in an isolated git worktree — one change at a time, most severe first.</p>
+            <code>vra remediate --apply</code>
+          </li>
+          <li class="step reveal">
+            <span class="step__num">03</span>
+            <h3>Prove</h3>
+            <p>Your build, your tests and a <code>docker build</code> of every Dockerfile must still pass, and a re-scan must show the finding gone.</p>
+            <code>build · test · re-scan</code>
+          </li>
+          <li class="step reveal">
+            <span class="step__num">04</span>
+            <h3>Deliver</h3>
+            <p>Verified fixes land in one pull or merge request. Anything that breaks the build becomes a draft with the change applied and the failure output.</p>
+            <code>vra remediate --open-pr</code>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ─── What it fixes ─────────────────────────────────────────── -->
+    <section class="section section--alt" id="fixes">
+      <div class="wrap">
+        <header class="section__head reveal">
+          <p class="kicker">What it fixes</p>
+          <h2>Real fixes, not just a longer report</h2>
+          <p>Every fix comes from a deterministic source — a scanner advisory, a rule's own fix, or a built-in hardening recipe. No model guessing at your code.</p>
+        </header>
+
+        <div class="cards">
+          <article class="card card--wide reveal">
+            <div class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>
+            </div>
+            <h3>Vulnerable dependencies</h3>
+            <p>Upgrades each package to the <strong>lowest version that closes every CVE</strong>, respecting backport release lines. Direct and transitive — via overrides, constraints and dependency management. Lockfiles are refreshed; formatting and line endings are kept. Major upgrades are flagged for review.</p>
+            <ul class="tags">
+              <li>Maven</li><li>Gradle</li><li>npm</li><li>yarn</li><li>pnpm</li><li>pip</li><li>uv</li><li>Poetry</li><li>Go modules</li>
+            </ul>
+          </article>
+
+          <article class="card reveal">
+            <div class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>
+            </div>
+            <h3>Insecure code</h3>
+            <p>Applies the fix that ships with the Semgrep rule — e.g. <code>shell=True</code> → <code>shell=False</code>. Refused if the file changed since the scan, and always marked for review.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 10V6h4v4M13 10V6h4v4"/></svg>
+            </div>
+            <h3>Dockerfiles</h3>
+            <p>Built-in hardening, each verified with a real image build:</p>
+            <ul class="ticks">
+              <li>run as a non-root user</li>
+              <li>pin base images to a digest</li>
+              <li><code>COPY</code> instead of <code>ADD</code></li>
+              <li>no SSH port 22</li>
+              <li>merge <code>apt-get update</code> with install</li>
+              <li><code>MAINTAINER</code> → <code>LABEL</code></li>
+            </ul>
+          </article>
+
+          <article class="card reveal">
+            <div class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M6 8.5v7M8.3 7.2l7.4 3.6"/></svg>
+            </div>
+            <h3>CI supply chain</h3>
+            <p>Pins third-party pipeline steps from a mutable tag to their full commit SHA — <code>@v4</code> becomes <code>@11d5960a… # v4</code> — so a moved tag can't change what your pipeline runs.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l2 2M15 8l2 2"/></svg>
+            </div>
+            <h3>Hardcoded secrets</h3>
+            <p>A committed secret must be <em>revoked</em>, not deleted. VRA+ opens one issue per repository with every location and the revoke → move → purge-history steps. Values are never copied.</p>
+          </article>
+        </div>
+        <p class="note reveal">Findings without a deterministic fix are listed too — nothing silently disappears.</p>
+      </div>
+    </section>
+
+    <!-- ─── Verification ──────────────────────────────────────────── -->
+    <section class="section" id="verify">
+      <div class="wrap verify">
+        <div class="verify__copy">
+          <header class="section__head section__head--left reveal">
+            <p class="kicker">Verification</p>
+            <h2>A fix that breaks the build isn't a fix</h2>
+            <p>Before touching anything, VRA+ runs every check on your untouched code. Then each fix has to pass all of them again.</p>
+          </header>
+          <ul class="points">
+            <li class="reveal"><strong>Everything it touches is checked.</strong> A dependency bump must pass your tests <em>and</em> still build your Docker image — <code>requests 2.33</code> passes on a modern Python but breaks a <code>python:3.9</code> image. VRA+ catches that.</li>
+            <li class="reveal"><strong>One change at a time.</strong> A failure is pinned to the change that caused it and never blocks the fixes that work.</li>
+            <li class="reveal"><strong>No silent downgrades.</strong> A transitive pin that would undercut a related upgrade is skipped.</li>
+            <li class="reveal"><strong>Your working tree is never touched.</strong> All work happens in a temporary git worktree; results land on branches.</li>
+            <li class="reveal"><strong>Missing toolchain ≠ success.</strong> No <code>mvn</code> or <code>docker</code> on the machine? The fix is marked <em>unverified</em> and the PR says so.</li>
+          </ul>
+        </div>
+
+        <div class="table-card reveal">
+          <p class="table-card__title">Auto-detected build</p>
+          <table>
+            <tbody>
+              <tr><th><code>pom.xml</code></th><td><code>mvnw verify</code></td></tr>
+              <tr><th><code>build.gradle</code></th><td><code>gradlew build</code></td></tr>
+              <tr><th><code>package.json</code></th><td>install · <code>run build</code> · <code>run test</code></td></tr>
+              <tr><th><code>uv.lock</code></th><td><code>uv sync</code> · <code>pip check</code> · <code>pytest</code></td></tr>
+              <tr><th><code>poetry.lock</code></th><td><code>poetry install</code> · <code>pip check</code> · <code>pytest</code></td></tr>
+              <tr><th><code>requirements.txt</code></th><td>throwaway venv · <code>pip check</code> · <code>pytest</code></td></tr>
+              <tr><th><code>go.mod</code></th><td><code>go build</code> · <code>go test</code></td></tr>
+              <tr><th><code>Dockerfile*</code></th><td><code>docker build</code></td></tr>
+            </tbody>
+          </table>
+          <p class="table-card__foot">Or bring your own: <code>--verify-command "make ci"</code></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── What you get ──────────────────────────────────────────── -->
+    <section class="section section--alt" id="results">
+      <div class="wrap">
+        <header class="section__head reveal">
+          <p class="kicker">What lands in your repo</p>
+          <h2>Reviewable, idempotent, and honest about what failed</h2>
+          <p>Re-running VRA+ updates everything in place — branches are force-pushed, PRs and issues edited, never duplicated.</p>
+        </header>
+        <div class="deliver">
+          <article class="deliver__item reveal">
+            <span class="badge badge--ok">PR / MR</span>
+            <h3><code>vra/remediate</code></h3>
+            <p>Every verified fix, grouped by kind, with what each one closes and the verification results.</p>
+            <div class="mock">
+              <p class="mock__title">VRA+: fix 40 security findings</p>
+              <p class="mock__row"><span class="t-ok">✓</span> python <span class="t-ok">✓</span> web <span class="t-ok">✓</span> docker</p>
+            </div>
+          </article>
+          <article class="deliver__item reveal">
+            <span class="badge badge--warn">Draft PR / MR</span>
+            <h3><code>vra/needs-human/&lt;name&gt;</code></h3>
+            <p>A fix that breaks the build — change already applied, failure output attached, and what was tried.</p>
+            <div class="mock">
+              <p class="mock__title">needs manual fix — PyJWT 1.7.1 → 2.14.0</p>
+              <p class="mock__row t-dim">E  assert isinstance(token, bytes)</p>
+            </div>
+          </article>
+          <article class="deliver__item reveal">
+            <span class="badge badge--info">Issue</span>
+            <h3>Secrets to rotate</h3>
+            <p>A checklist of file:line and secret type, with revoke and history-purge steps.</p>
+            <div class="mock">
+              <p class="mock__title">VRA+: hardcoded secrets need rotation</p>
+              <p class="mock__row t-dim">☐ app/settings.py:5 — API token</p>
+            </div>
+          </article>
+        </div>
+        <p class="note reveal">GitHub pull requests and GitLab merge requests. Exit code <code>2</code> tells your pipeline some fixes need a human.</p>
+      </div>
+    </section>
+
+    <!-- ─── CI/CD ─────────────────────────────────────────────────── -->
+    <section class="section" id="ci">
+      <div class="wrap ci">
+        <div class="ci__copy">
+          <header class="section__head section__head--left reveal">
+            <p class="kicker">CI/CD</p>
+            <h2>Just the CLI. No plugin, no app to install.</h2>
+            <p>Download the binary in any pipeline and run two commands. A weekly schedule keeps your fix PR/MR current; merging it re-runs the scan.</p>
+          </header>
+          <ul class="points points--compact">
+            <li class="reveal">GitHub Actions, GitLab CI, Jenkins — anything that runs a shell</li>
+            <li class="reveal">Fail on <code>CRITICAL</code>, allow <code>HIGH</code>, or report-only with <code>--no-fail</code></li>
+            <li class="reveal">Configure with YAML, environment variables or flags</li>
+          </ul>
+        </div>
+        <div class="tabs tabs--ci reveal">
+          <div class="tabs__list" role="tablist" aria-label="CI platform">
+            <button role="tab" aria-selected="true" aria-controls="ci-gh" id="t-ci-gh">GitHub Actions</button>
+            <button role="tab" aria-selected="false" aria-controls="ci-gl" id="t-ci-gl" tabindex="-1">GitLab CI</button>
+          </div>
+          <div class="code tabs__panel" role="tabpanel" id="ci-gh" aria-labelledby="t-ci-gh">
+            <div class="code__bar"><p>.github/workflows/vra.yml</p><button class="copy" data-copy="ci-snippet-gh">Copy</button></div>
+<pre id="ci-snippet-gh"><code><span class="c-key">on</span>:
+  <span class="c-key">schedule</span>: [{ <span class="c-key">cron</span>: <span class="c-str">"0 6 * * 1"</span> }]
+  <span class="c-key">push</span>: { <span class="c-key">branches</span>: [main] }
+
+<span class="c-key">jobs</span>:
+  <span class="c-key">remediate</span>:
+    <span class="c-key">runs-on</span>: ubuntu-latest
+    <span class="c-key">steps</span>:
+      - <span class="c-key">uses</span>: actions/checkout@v4
+        <span class="c-key">with</span>: { <span class="c-key">fetch-depth</span>: 0 }
+      - <span class="c-key">run</span>: |
+          curl -fsSLo vra https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
+          chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
+      - <span class="c-key">run</span>: vra scan --scanner all --no-fail .
+      - <span class="c-key">run</span>: vra remediate --open-pr || [ $? -eq 2 ]
+        <span class="c-key">env</span>:
+          <span class="c-key">GITHUB_TOKEN</span>: ${{ secrets.VRA_TOKEN }}</code></pre>
+          </div>
+          <div class="code tabs__panel" role="tabpanel" id="ci-gl" aria-labelledby="t-ci-gl" hidden>
+            <div class="code__bar"><p>.gitlab-ci.yml</p><button class="copy" data-copy="ci-snippet-gl">Copy</button></div>
+<pre id="ci-snippet-gl"><code><span class="c-key">vra</span>:
+  <span class="c-key">rules</span>:
+    - <span class="c-key">if</span>: <span class="c-str">$CI_PIPELINE_SOURCE == "schedule"</span>
+    - <span class="c-key">if</span>: <span class="c-str">$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH</span>
+  <span class="c-key">variables</span>:
+    <span class="c-key">GIT_DEPTH</span>: 0
+  <span class="c-key">script</span>:
+    - curl -fsSLo vra https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
+    - chmod +x vra &amp;&amp; mv vra /usr/local/bin/
+    - vra scan --scanner all --no-fail .
+    <span class="c-dim"># GITLAB_TOKEN: api + write_repository</span>
+    - git remote set-url origin
+        <span class="c-str">"https://oauth2:$GITLAB_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"</span>
+    - vra remediate --open-pr || [ $? -eq 2 ]</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Free tier ─────────────────────────────────────────────── -->
+    <section class="section section--alt" id="free">
+      <div class="wrap">
+        <header class="section__head reveal">
+          <p class="kicker">Pricing</p>
+          <h2>Everything deterministic is free</h2>
+          <p>If a fix doesn't need AI, it doesn't cost anything.</p>
+        </header>
+        <div class="plans">
+          <article class="plan plan--main reveal">
+            <p class="plan__name">VRA+ Free</p>
+            <p class="plan__price">$0 <span>forever</span></p>
+            <ul class="ticks">
+              <li>Scanning with Trivy, Semgrep and Checkov</li>
+              <li>Dependency upgrades in 9 ecosystems</li>
+              <li>Semgrep rule fixes</li>
+              <li>Dockerfile hardening</li>
+              <li>CI pipeline pinning to commit SHAs</li>
+              <li>Secrets rotation issues</li>
+              <li>Build-verified PRs/MRs, drafts for the rest</li>
+              <li>GitHub and GitLab; Linux, macOS and Windows</li>
+            </ul>
+            <a class="btn btn--primary btn--block" href="#install">Install now</a>
+          </article>
+          <article class="plan reveal">
+            <p class="plan__name">VRA+ AI <span class="soon">coming soon</span></p>
+            <p class="plan__price plan__price--muted">Paid add-on</p>
+            <ul class="ticks ticks--muted">
+              <li>AI-assisted fixes for findings with no rule-based fix</li>
+              <li>Help with the drafts that need a human</li>
+              <li>Same verification — your build still decides</li>
+            </ul>
+            <p class="plan__more">Next on the roadmap: independent validation — a re-scan diffed against the original report to prove every CVE is closed.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Install ───────────────────────────────────────────────── -->
+    <section class="section" id="install">
+      <div class="wrap install">
+        <header class="section__head reveal">
+          <p class="kicker">Install</p>
+          <h2>Up and running in a minute</h2>
+          <p>No Python, no package manager, no scanners to install. The binary is named <code>vra</code>.</p>
+        </header>
+
+        <div class="tabs reveal">
+          <div class="tabs__list" role="tablist" aria-label="Platform">
+            <button role="tab" aria-selected="true" aria-controls="tab-linux" id="t-linux">Linux</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-deb" id="t-deb" tabindex="-1">Debian / Ubuntu</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-rpm" id="t-rpm" tabindex="-1">RHEL / Fedora</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-mac" id="t-mac" tabindex="-1">macOS</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-win" id="t-win" tabindex="-1">Windows</button>
+          </div>
+
+          <div class="code tabs__panel" role="tabpanel" id="tab-linux" aria-labelledby="t-linux">
+            <div class="code__bar"><p>bash</p><button class="copy" data-copy="cmd-linux">Copy</button></div>
+<pre id="cmd-linux"><code>curl -LO https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
+chmod +x vra-linux-amd64 &amp;&amp; sudo mv vra-linux-amd64 /usr/local/bin/vra
+vra --version</code></pre>
+          </div>
+          <div class="code tabs__panel" role="tabpanel" id="tab-deb" aria-labelledby="t-deb" hidden>
+            <div class="code__bar"><p>bash</p><button class="copy" data-copy="cmd-deb">Copy</button></div>
+<pre id="cmd-deb"><code>curl -LO https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64.deb
+sudo dpkg -i vra-linux-amd64.deb
+vra --version</code></pre>
+          </div>
+          <div class="code tabs__panel" role="tabpanel" id="tab-rpm" aria-labelledby="t-rpm" hidden>
+            <div class="code__bar"><p>bash</p><button class="copy" data-copy="cmd-rpm">Copy</button></div>
+<pre id="cmd-rpm"><code>curl -LO https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64.rpm
+sudo rpm -i vra-linux-amd64.rpm
+vra --version</code></pre>
+          </div>
+          <div class="code tabs__panel" role="tabpanel" id="tab-mac" aria-labelledby="t-mac" hidden>
+            <div class="code__bar"><p>zsh · Apple Silicon</p><button class="copy" data-copy="cmd-mac">Copy</button></div>
+<pre id="cmd-mac"><code>curl -LO https://github.com/gboie/vra-plus/releases/latest/download/vra-darwin-arm64
+chmod +x vra-darwin-arm64 &amp;&amp; sudo mv vra-darwin-arm64 /usr/local/bin/vra
+xattr -d com.apple.quarantine /usr/local/bin/vra 2&gt;/dev/null
+vra --version</code></pre>
+          </div>
+          <div class="code tabs__panel" role="tabpanel" id="tab-win" aria-labelledby="t-win" hidden>
+            <div class="code__bar"><p>PowerShell</p><button class="copy" data-copy="cmd-win">Copy</button></div>
+<pre id="cmd-win"><code>Invoke-WebRequest -OutFile vra.exe `
+  -Uri https://github.com/gboie/vra-plus/releases/latest/download/vra-windows-amd64.exe
+.\vra.exe --version</code></pre>
+          </div>
+        </div>
+
+        <div class="quick reveal">
+          <div class="quick__step"><span>1</span><code>vra scan --scanner all .</code><p>see what's wrong</p></div>
+          <div class="quick__step"><span>2</span><code>vra remediate</code><p>preview the plan — touches nothing</p></div>
+          <div class="quick__step"><span>3</span><code>vra remediate --apply</code><p>verified fixes on a local branch</p></div>
+          <div class="quick__step"><span>4</span><code>vra remediate --open-pr</code><p>push and open the PR</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ─── Footer ────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <a class="brand" href="#top" aria-label="Back to top">
+        <img src="assets/logo.svg" alt="" width="24" height="24" />
+        <span class="brand__name">VRA<span class="plus">+</span></span>
+      </a>
+      <p>Vulnerability Remediation Automation · © <span id="year">2026</span> Rebellis</p>
+      <nav aria-label="Footer">
+        <a href="#how">How it works</a>
+        <a href="#fixes">Fixes</a>
+        <a href="#install">Install</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>
