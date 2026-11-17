@@ -47,6 +47,7 @@
         <span></span><span></span>
       </button>
       <nav class="nav__links" id="nav-links">
+        <a href="#why">Why VRA+</a>
         <a href="#how">How it works</a>
         <a href="#fixes">What it fixes</a>
         <a href="#verify">Verification</a>
@@ -114,6 +115,101 @@
           <li><span class="chip">Semgrep</span> source code (SAST)</li>
           <li><span class="chip">Checkov</span> IaC · Dockerfiles · CI configs</li>
         </ul>
+      </div>
+    </section>
+
+    <!-- ─── Why: the story ────────────────────────────────────────── -->
+    <section class="section section--alt" id="why">
+      <div class="wrap">
+        <header class="section__head reveal">
+          <p class="kicker">Why VRA+</p>
+          <h2>You became a developer to build things.<br /><span class="grad">Not to babysit CVEs.</span></h2>
+        </header>
+
+        <div class="story reveal">
+          <p><strong>Monday morning.</strong> The scanner has 63 new findings for you. Each one starts the same chore: read the advisory, find which version actually fixes it, check whether that version breaks anything, bump it, wait for the build, figure out why the tests went red, open a PR, chase a review.</p>
+          <p><strong>By Thursday</strong> the list is shorter, the feature you planned hasn't moved, and the same two people on your team have done all of it — again.</p>
+          <p><strong>Next Monday it's back.</strong> About 132 new CVEs are published every day<a class="ref" href="#src-1">1</a>, against code you haven't touched in months. Security triage never finishes; it only waits for you.</p>
+        </div>
+
+        <div class="stats">
+          <figure class="stat reveal">
+            <p class="stat__num">72%</p>
+            <blockquote>of developers spend more than <strong>17 hours a week</strong> on security-related tasks — one in four spends more than 25.</blockquote>
+            <figcaption>Checkmarx, 2025 global developer study<a class="ref" href="#src-2">2</a></figcaption>
+          </figure>
+          <figure class="stat reveal">
+            <p class="stat__num">~25%</p>
+            <blockquote>of security teams' time is spent <strong>remediating vulnerabilities</strong> — even when those vulnerabilities may be overrated or non-exploitable.</blockquote>
+            <figcaption>JFrog, Software Supply Chain State of the Union 2024<a class="ref" href="#src-3">3</a></figcaption>
+          </figure>
+          <figure class="stat reveal">
+            <p class="stat__num">48,185</p>
+            <blockquote>CVEs were published in 2025 — a record, and <strong>20.6% more</strong> than the year before.</blockquote>
+            <figcaption>Jerry Gamblin, 2025 CVE Data Review<a class="ref" href="#src-1">1</a></figcaption>
+          </figure>
+          <figure class="stat reveal">
+            <p class="stat__num">82%</p>
+            <blockquote>of practitioners say remediating <strong>a single vulnerability</strong> takes longer than 21 minutes — against an average backlog of 1.1 million.</blockquote>
+            <figcaption>Ponemon Institute &amp; Rezilion, 2022<a class="ref" href="#src-4">4</a></figcaption>
+          </figure>
+        </div>
+
+        <div class="compare">
+          <article class="compare__col compare__col--before reveal">
+            <p class="compare__label">Without VRA+</p>
+            <ol>
+              <li>Read the scanner report and triage each finding</li>
+              <li>Research advisories and fixed versions</li>
+              <li>Pick a version that fixes <em>every</em> CVE without a breaking jump</li>
+              <li>Edit manifests, overrides and lockfiles</li>
+              <li>Build, test, debug, repeat</li>
+              <li>Harden Dockerfiles and pin CI steps by hand</li>
+              <li>Open PRs, write descriptions, chase reviews</li>
+              <li>Do it all again next week</li>
+            </ol>
+          </article>
+          <article class="compare__col compare__col--after reveal">
+            <p class="compare__label">With VRA+</p>
+            <ol>
+              <li><code>vra scan</code> and <code>vra remediate --open-pr</code> run in your pipeline</li>
+              <li><span class="coffee" aria-hidden="true">☕</span> You get a coffee</li>
+              <li>You review <strong>one</strong> pull or merge request — every fix already built and tested</li>
+              <li>Anything risky waits in a draft, with the failure output attached</li>
+            </ol>
+          </article>
+        </div>
+
+        <div class="calc reveal" aria-labelledby="calc-title">
+          <div class="calc__inputs">
+            <p class="calc__title" id="calc-title">What does it cost your team?</p>
+            <label class="calc__field">
+              <span>Findings to fix per month <output id="out-findings">40</output></span>
+              <input type="range" id="in-findings" min="5" max="300" step="5" value="40" />
+            </label>
+            <label class="calc__field">
+              <span>Minutes per fix — research, change, build, PR <output id="out-minutes">30</output></span>
+              <input type="range" id="in-minutes" min="5" max="120" step="5" value="30" />
+            </label>
+            <p class="calc__hint">Set these to your own numbers. For reference, 82% of practitioners say one fix takes longer than 21 minutes<a class="ref" href="#src-4">4</a>.</p>
+          </div>
+          <div class="calc__result" aria-live="polite">
+            <p class="calc__big"><span id="res-hours">20</span><small> hours / month</small></p>
+            <p class="calc__sub">≈ <strong id="res-days">2.5</strong> working days, every month, on remediation — <strong id="res-year">240</strong> hours a year.</p>
+            <p class="calc__punch">Let VRA+ take care of it while you're getting your coffee.</p>
+            <a class="btn btn--primary" href="#install">Get your hours back</a>
+          </div>
+        </div>
+
+        <details class="sources reveal">
+          <summary>Sources</summary>
+          <ol>
+            <li id="src-1">Jerry Gamblin — <a href="https://jerrygamblin.com/2026/01/01/2025-cve-data-review/" target="_blank" rel="noopener">2025 CVE Data Review</a> (48,185 CVEs in 2025 vs 39,962 in 2024; per-day figure is 48,185 ÷ 365).</li>
+            <li id="src-2">Checkmarx — <a href="https://checkmarx.com/press-releases/global-checkmarx-study-reveals-developers-are-growing-more-confident-in-application-security-knowledge-still-hampered-by-time-spent-on-security/" target="_blank" rel="noopener">Global study: developers still hampered by time spent on security</a>, March 2025, 1,500 respondents.</li>
+            <li id="src-3">JFrog — <a href="https://investors.jfrog.com/files/doc_news/2024/03/1/final_jfrog-data-report-pr-2024.pdf" target="_blank" rel="noopener">Software Supply Chain State of the Union 2024, press release (PDF)</a>, March 2024, ~1,200 respondents.</li>
+            <li id="src-4">Ponemon Institute &amp; Rezilion — <a href="https://www.prnewswire.com/news-releases/rezilion-and-ponemon-release-new-report-finds-thousands-of-hours-lost-to-vulnerability-backlog-management-due-to-lack-of-prioritization-and-automation-301623779.html" target="_blank" rel="noopener">The State of Vulnerability Management in DevSecOps</a>, September 2022, 634 practitioners.</li>
+          </ol>
+        </details>
       </div>
     </section>
 

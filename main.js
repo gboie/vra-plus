@@ -217,6 +217,33 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
   });
 })();
 
+// ─── Time calculator ───────────────────────────────────────────────
+(function initCalc() {
+  const f = document.getElementById('in-findings');
+  const m = document.getElementById('in-minutes');
+  if (!f || !m) return;
+  const set = (id, v) => { document.getElementById(id).textContent = v; };
+  const fmt = (n) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10).toLocaleString('en-US');
+  function update() {
+    const hours = (Number(f.value) * Number(m.value)) / 60;
+    set('out-findings', f.value);
+    set('out-minutes', m.value);
+    set('res-hours', fmt(hours));
+    set('res-days', fmt(hours / 8));
+    set('res-year', fmt(hours * 12));
+  }
+  f.addEventListener('input', update);
+  m.addEventListener('input', update);
+  update();
+})();
+
+// ─── Footnote links open the sources list ─────────────────────────
+(function initRefs() {
+  const box = document.querySelector('.sources');
+  if (!box) return;
+  document.querySelectorAll('a.ref').forEach((a) => a.addEventListener('click', () => { box.open = true; }));
+})();
+
 // ─── Footer year ───────────────────────────────────────────────────
 (function initYear() {
   const el = document.getElementById('year');
