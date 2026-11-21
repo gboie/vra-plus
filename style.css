@@ -738,3 +738,20 @@ span.flag__name { font-family: var(--font-display); font-size: 16px; }
 .guide__more a, .guide-link a { font-weight: 500; }
 .guide__more code, .guide-link code { color: inherit; background: none; padding: 0; }
 .guide-link { margin-top: 10px; color: var(--text-3); font-size: 14px; }
+
+/* Pipelines */
+.stages { display: grid; gap: 10px; margin-top: 20px; align-items: stretch; }
+@media (min-width: 820px) { .stages { grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; } }
+.stage { padding: 16px 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); display: grid; gap: 6px; }
+.stage__tag { font: 600 12px/1 var(--font-mono); color: var(--sky); text-transform: uppercase; letter-spacing: .08em; }
+.stage p { color: var(--text-2); font-size: 14.5px; }
+.stage__note { color: var(--text-3) !important; font-size: 13px !important; }
+.stage__arrow { display: grid; place-items: center; color: var(--text-3); font: 500 12px/1 var(--font-mono); position: relative; padding: 8px 0; }
+.stage__arrow span { padding: 6px 10px; border-radius: 999px; border: 1px dashed var(--border-lit); background: var(--bg); }
+.stage__arrow::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1px dashed var(--border-lit); z-index: -1; }
+@media (min-width: 820px) { .stage__arrow::before { left: 0; right: 0; top: 50%; bottom: auto; border-left: 0; border-top: 1px dashed var(--border-lit); } }
+.tabs--docs { max-width: none; margin: 20px 0 0; }
+.tabs--docs .doc-code-wrap { margin-top: 0; }
+.tabs--docs .doc-code { margin-top: 0; max-height: 560px; overflow: auto; }
+.ci__more { margin-top: 22px; font-size: 15px; }
+.ci__more a { font-weight: 500; }

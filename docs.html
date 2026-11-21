@@ -52,6 +52,7 @@
       <nav class="docs__toc">
         <a href="#quickstart">Quick start</a>
         <a href="#guides">Command guides</a>
+        <a href="#pipelines">CI/CD pipelines</a>
         <a href="#global">Global options</a>
         <a href="#scan"><code>vra scan</code></a>
         <a href="#remediate"><code>vra remediate</code></a>
@@ -315,6 +316,161 @@ vra --format json config | jq .scanner.enabled
 VRA__SCANNER__SEVERITY_THRESHOLD=MEDIUM vra config   <span class="c-dim"># check an override</span></code></pre>
               <p class="guide__more"><a href="#config">More on <code>vra config</code> →</a></p>
             </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ─── CI/CD pipelines ──────────────────────────────────────── -->
+      <section class="doc-sec" id="pipelines">
+        <h2>CI/CD pipelines</h2>
+        <p>Run VRA+ as two stages. <strong>Stage 1</strong> scans and publishes <code>scan-report.json</code> as a pipeline artifact; <strong>stage 2</strong> checks out the same commit, downloads the report and opens the fix PR/MR with <code>--report</code> — no re-scan. The scan stage needs no write access.</p>
+
+        <div class="stages">
+          <div class="stage"><span class="stage__tag">Stage 1 · scan</span><p>checkout → <code>vra scan --no-fail .</code> → publish the report</p><p class="stage__note">read-only</p></div>
+          <div class="stage__arrow" aria-hidden="true"><span>scan-report.json</span></div>
+          <div class="stage"><span class="stage__tag">Stage 2 · remediate</span><p>checkout the same commit → get the report → <code>vra remediate --open-pr --report …</code></p><p class="stage__note">build toolchain + write token</p></div>
+        </div>
+
+        <div class="tabs tabs--docs">
+          <div class="tabs__list" role="tablist" aria-label="CI platform">
+            <button role="tab" aria-selected="true" aria-controls="pipe-gh" id="t-pipe-gh">GitHub Actions</button>
+            <button role="tab" aria-selected="false" aria-controls="pipe-gl" id="t-pipe-gl" tabindex="-1">GitLab CI</button>
+          </div>
+          <div class="tabs__panel" role="tabpanel" id="pipe-gh" aria-labelledby="t-pipe-gh">
+<pre class="doc-code"><code><span class="c-dim"># .github/workflows/vra.yml</span>
+name: VRA+
+
+on:
+  schedule:
+    - cron: &quot;0 6 * * 1&quot;            <span class="c-dim"># weekly: new CVEs appear against unchanged code</span>
+  push:
+    branches: [main]               <span class="c-dim"># e.g. after a VRA+ PR is merged</span>
+  workflow_dispatch:
+
+env:
+  VRA_URL: https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
+
+jobs:
+  <span class="c-dim"># ── Stage 1: scan, and publish the report ──────────────────────────</span>
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install VRA+
+        run: curl -fsSLo vra &quot;$VRA_URL&quot; &amp;&amp; chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
+
+      - name: Scan
+        run: vra scan --no-fail .
+
+      - name: Publish the scan report
+        uses: actions/upload-artifact@v4
+        with:
+          name: vra-scan-report
+          path: vra-reports/scan-report.json
+          retention-days: 7
+
+  <span class="c-dim"># ── Stage 2: fix what stage 1 found ────────────────────────────────</span>
+  remediate:
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write              <span class="c-dim"># push the vra/* branches</span>
+      pull-requests: write         <span class="c-dim"># open / update the PRs</span>
+      issues: write                <span class="c-dim"># the secrets issue</span>
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}   <span class="c-dim"># exactly the commit that was scanned</span>
+          fetch-depth: 0
+          token: ${{ secrets.VRA_TOKEN }}
+
+      <span class="c-dim"># Your build toolchain, so every fix is verified by your build and tests:</span>
+      - uses: actions/setup-node@v4
+        with: { node-version: &quot;20&quot; }
+
+      - name: Install VRA+
+        run: curl -fsSLo vra &quot;$VRA_URL&quot; &amp;&amp; chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
+
+      - name: Get the scan report from stage 1
+        uses: actions/download-artifact@v4
+        with:
+          name: vra-scan-report
+          path: vra-reports
+
+      - name: Remediate and open the PR
+        env:
+          <span class="c-dim"># A personal or app token: PRs opened with the default GITHUB_TOKEN</span>
+          <span class="c-dim"># don&#x27;t trigger your CI. Needs Contents, Pull requests, Issues and</span>
+          <span class="c-dim"># Workflows: Read and write.</span>
+          GITHUB_TOKEN: ${{ secrets.VRA_TOKEN }}
+        <span class="c-dim"># Exit code 2 = some fixes need a human (draft PRs opened): not a failure.</span>
+        run: vra remediate --open-pr --report vra-reports/scan-report.json || [ $? -eq 2 ]</code></pre>
+          </div>
+          <div class="tabs__panel" role="tabpanel" id="pipe-gl" aria-labelledby="t-pipe-gl" hidden>
+<pre class="doc-code"><code><span class="c-dim"># .gitlab-ci.yml</span>
+stages: [scan, remediate]
+
+variables:
+  VRA_URL: https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
+
+.vra:
+  image: python:3.12               <span class="c-dim"># an image with your build toolchain</span>
+  before_script:
+    - curl -fsSLo /usr/local/bin/vra &quot;$VRA_URL&quot; &amp;&amp; chmod +x /usr/local/bin/vra
+  rules:
+    - if: $CI_PIPELINE_SOURCE == &quot;schedule&quot;           <span class="c-dim"># weekly schedule</span>
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH     <span class="c-dim"># e.g. after a VRA+ MR is merged</span>
+
+<span class="c-dim"># ── Stage 1: scan, and publish the report ────────────────────────────</span>
+vra-scan:
+  extends: .vra
+  stage: scan
+  script:
+    - vra scan --no-fail .
+  artifacts:
+    paths: [vra-reports/scan-report.json]
+    expire_in: 7 days
+
+<span class="c-dim"># ── Stage 2: fix what stage 1 found ──────────────────────────────────</span>
+vra-remediate:
+  extends: .vra
+  stage: remediate
+  needs: [vra-scan]                <span class="c-dim"># same commit; downloads the scan report</span>
+  variables:
+    GIT_DEPTH: 0                   <span class="c-dim"># full history to branch from</span>
+  script:
+    <span class="c-dim"># GITLAB_TOKEN: a masked CI/CD variable holding a project access token</span>
+    <span class="c-dim"># with the api + write_repository scopes (CI_JOB_TOKEN can&#x27;t open MRs).</span>
+    - git remote set-url origin &quot;https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git&quot;
+    <span class="c-dim"># Exit code 2 = some fixes need a human (draft MRs opened): not a failure.</span>
+    - vra remediate --open-pr --report vra-reports/scan-report.json || [ $? -eq 2 ]</code></pre>
+          </div>
+        </div>
+
+        <div class="flags">
+          <details class="flag">
+            <summary><span class="flag__name">Why the same commit matters</span></summary>
+            <div class="flag__body"><p>The report describes one commit. Stage 2 must fix that commit, or line numbers and versions won't match. GitLab checks out the pipeline's commit in every job automatically; on GitHub, <code>ref: ${{ github.sha }}</code> does it. Report paths are relative to the scanned folder, so the report works from any checkout.</p></div>
+          </details>
+          <details class="flag">
+            <summary><span class="flag__name">Detached HEAD</span></summary>
+            <div class="flag__body"><p>CI checkouts often aren't on a branch. VRA+ then opens the PR/MR against the branch the pipeline runs for — <code>CI_COMMIT_BRANCH</code> on GitLab, <code>GITHUB_REF</code> on GitHub — and stops with a clear message if it can't tell.</p></div>
+          </details>
+          <details class="flag">
+            <summary><span class="flag__name">Toolchains and Docker in stage 2</span></summary>
+            <div class="flag__body"><p>Install the tools your build needs (Node, Java, Python, Go…) so every fix is verified by your build and tests. Dockerfile fixes are also checked with <code>docker build</code> — on GitHub runners Docker is already there; on GitLab add <code>services: [docker:dind]</code>. Without a tool, fixes are marked <em>unverified</em> and the PR/MR says so.</p></div>
+          </details>
+          <details class="flag">
+            <summary><span class="flag__name">Blocking merges on findings</span></summary>
+            <div class="flag__body"><p>Keep remediation on a schedule and gate pull/merge requests with a separate job that fails on new CRITICAL or HIGH findings:</p>
+<pre class="doc-code"><code>vra scan --max-critical 0 --max-high 0 .</code></pre></div>
+          </details>
+          <details class="flag">
+            <summary><span class="flag__name">Tokens</span></summary>
+            <div class="flag__body"><p><strong>GitHub:</strong> a fine-grained token (secret <code>VRA_TOKEN</code>) with Contents, Pull requests, Issues and Workflows: Read and write. PRs opened with the default <code>GITHUB_TOKEN</code> don't trigger your CI. <strong>GitLab:</strong> a project access token (masked variable <code>GITLAB_TOKEN</code>) with <code>api</code> + <code>write_repository</code>; <code>CI_JOB_TOKEN</code> can't open merge requests.</p></div>
           </details>
         </div>
       </section>
