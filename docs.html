@@ -113,7 +113,7 @@ GITHUB_TOKEN=… vra remediate --open-pr</code></pre>
               <ol class="guide__steps">
                 <li><strong>Picks the scanners.</strong> All three by default. A target that isn't a local path is treated as a container image and scanned with Trivy only.</li>
                 <li><strong>Refreshes what it knows.</strong> Trivy downloads the latest vulnerability database and Semgrep fetches the latest registry rules. Air-gapped? Set <code>scanner.update_db</code> / <code>update_rules</code> to <code>false</code> to scan offline with bundled rules.</li>
-                <li><strong>Runs each scanner on the target.</strong> Trivy reads manifests, lockfiles and images; Semgrep reads source code; Checkov reads IaC, Dockerfiles and CI configs, skipping <code>node_modules</code>, <code>build</code>, <code>vendor</code> and similar. Each scanner has a time limit (<code>scanner.timeout_seconds</code>, 300 s).</li>
+                <li><strong>Runs each scanner on the target.</strong> Trivy reads manifests, lockfiles and images; Semgrep reads source code; Checkov reads Terraform, CloudFormation, ARM, Kubernetes manifests, Dockerfiles and secrets, skipping <code>node_modules</code>, <code>build</code>, <code>vendor</code> and similar. Each scanner has a time limit (<code>scanner.timeout_seconds</code>, 300 s).</li>
                 <li><strong>Normalises the findings</strong> into one format — severity, CVE or rule ID, package and fixed version, file and line — keeps those at or above <code>--severity</code>, and groups them by type: SCA, Container, SAST, IaC, Secrets.</li>
                 <li><strong>Applies the fail policy:</strong> counts findings per severity against the <code>--max-*</code> limits.</li>
                 <li><strong>Writes the report</strong> <code>vra-reports/scan-report.json</code> — every finding, whether it has a known fix, and the policy result.</li>
@@ -509,8 +509,12 @@ vra --format sarif scan . &gt; vra.sarif</code></pre>
           <details class="flag">
             <summary><code class="flag__name">--version</code><span class="flag__val">flag</span></summary>
             <div class="flag__body">
-              <p>Print the VRA+ version and exit.</p>
-<pre class="doc-code"><code>vra --version</code></pre>
+              <p>Print the VRA+ version and the versions of the bundled scanners, then exit.</p>
+<pre class="doc-code"><code>vra --version
+VRA+ 0.4.4
+  trivy    0.76.2
+  semgrep  1.186.0
+  checkov  3.4.6</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -559,7 +563,7 @@ vra scan nginx:1.25</code></pre>
               <ul class="doc-list">
                 <li><strong>trivy</strong> — dependencies (SCA), container images, secrets</li>
                 <li><strong>semgrep</strong> — source code (SAST)</li>
-                <li><strong>checkov</strong> — IaC, Dockerfiles, CI configs, secrets</li>
+                <li><strong>checkov</strong> — IaC (Terraform, CloudFormation, ARM, Kubernetes), Dockerfiles, secrets</li>
               </ul>
               <p>A container image (any target that isn't a local path) is always scanned with Trivy only — Semgrep and Checkov read files.</p>
               <p class="flag__env">Change the default with <code>scanner.enabled</code> in config (<code>VRA__SCANNER__ENABLED=trivy,semgrep</code>).</p>
@@ -871,6 +875,7 @@ export VRA__GITLAB__URL=https://gitlab.example.com</code></pre>
                   <tr><td><code>timeout_seconds</code></td><td><code>300</code></td><td>Per-scanner timeout</td></tr>
                   <tr><td><code>update_db</code></td><td><code>true</code></td><td>Fetch the latest Trivy vulnerability database</td></tr>
                   <tr><td><code>update_rules</code></td><td><code>true</code></td><td>Fetch the latest Semgrep rules</td></tr>
+                  <tr><td><em>Checkov rules</em></td><td>bundled</td><td>No setting: Checkov's policies ship inside the Checkov package. Every VRA+ release upgrades Trivy, Semgrep and Checkov to their latest versions, so upgrading VRA+ gets you the newest Checkov policies. <code>vra --version</code> shows what you have.</td></tr>
                   <tr><td><code>fail_policy.critical</code> / <code>.high</code></td><td><code>0</code></td><td>Findings allowed before failing</td></tr>
                   <tr><td><code>fail_policy.medium</code> / <code>.low</code></td><td><code>-1</code></td><td>No limit</td></tr>
                   <tr><td><code>skip_dirs</code></td><td><code>node_modules</code>, <code>build</code>, <code>dist</code>, <code>vendor</code>, <code>target</code>, <code>venv</code>, …</td><td>Directories Checkov skips (hidden dirs are always skipped)</td></tr>
