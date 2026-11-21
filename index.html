@@ -401,14 +401,14 @@
           <header class="section__head section__head--left reveal">
             <p class="kicker">CI/CD</p>
             <h2>Just the CLI. No plugin, no app to install.</h2>
-            <p>Download the binary in any pipeline and run two commands. A weekly schedule keeps your fix PR/MR current; merging it re-runs the scan.</p>
+            <p>Two stages: <strong>scan</strong> publishes the report, <strong>remediate</strong> picks it up on the same commit and opens the fix PR/MR. A weekly schedule keeps it current; merging it re-runs the scan.</p>
           </header>
           <ul class="points points--compact">
             <li class="reveal">GitHub Actions, GitLab CI, Jenkins — anything that runs a shell</li>
             <li class="reveal">Fail on <code>CRITICAL</code>, allow <code>HIGH</code>, or report-only with <code>--no-fail</code></li>
             <li class="reveal">Configure with YAML, environment variables or flags</li>
           </ul>
-          <p class="ci__more reveal"><a href="docs.html#pipelines">Two-stage pipelines: scan, then remediate from the report →</a></p>
+          <p class="ci__more reveal"><a href="docs.html#pipelines">How the two stages work, tokens and toolchains →</a></p>
         </div>
         <div class="tabs tabs--ci reveal">
           <div class="tabs__list" role="tablist" aria-label="CI platform">
@@ -417,40 +417,115 @@
           </div>
           <div class="code tabs__panel" role="tabpanel" id="ci-gh" aria-labelledby="t-ci-gh">
             <div class="code__bar"><p>.github/workflows/vra.yml</p><button class="copy" data-copy="ci-snippet-gh">Copy</button></div>
-<pre id="ci-snippet-gh"><code><span class="c-key">on</span>:
-  <span class="c-key">schedule</span>: [{ <span class="c-key">cron</span>: <span class="c-str">"0 6 * * 1"</span> }]
-  <span class="c-key">push</span>: { <span class="c-key">branches</span>: [main] }
+<pre id="ci-snippet-gh"><code><span class="c-key">name</span>: VRA+
+
+<span class="c-key">on</span>:
+  <span class="c-key">schedule</span>:
+    - cron: &quot;0 6 * * 1&quot;            <span class="c-dim"># weekly: new CVEs appear against unchanged code</span>
+  <span class="c-key">push</span>:
+    branches: [main]               <span class="c-dim"># e.g. after a VRA+ PR is merged</span>
+  <span class="c-key">workflow_dispatch</span>:
+
+<span class="c-key">env</span>:
+  <span class="c-key">VRA_URL</span>: https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
 
 <span class="c-key">jobs</span>:
-  <span class="c-key">remediate</span>:
+  <span class="c-dim"># ── Stage 1: scan, and publish the report ──────────────────────────</span>
+  <span class="c-key">scan</span>:
     <span class="c-key">runs-on</span>: ubuntu-latest
+    <span class="c-key">permissions</span>:
+      <span class="c-key">contents</span>: read
     <span class="c-key">steps</span>:
       - <span class="c-key">uses</span>: actions/checkout@v4
-        <span class="c-key">with</span>: { <span class="c-key">fetch-depth</span>: 0 }
-      - <span class="c-key">run</span>: |
-          curl -fsSLo vra https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
-          chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
-      - <span class="c-key">run</span>: vra scan --no-fail .
-      - <span class="c-key">run</span>: vra remediate --open-pr || [ $? -eq 2 ]
+
+      - <span class="c-key">name</span>: Install VRA+
+        <span class="c-key">run</span>: curl -fsSLo vra &quot;$VRA_URL&quot; &amp;&amp; chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
+
+      - <span class="c-key">name</span>: Scan
+        <span class="c-key">run</span>: vra scan --no-fail .
+
+      - <span class="c-key">name</span>: Publish the scan report
+        <span class="c-key">uses</span>: actions/upload-artifact@v4
+        <span class="c-key">with</span>:
+          <span class="c-key">name</span>: vra-scan-report
+          <span class="c-key">path</span>: vra-reports/scan-report.json
+          <span class="c-key">retention-days</span>: 7
+
+  <span class="c-dim"># ── Stage 2: fix what stage 1 found ────────────────────────────────</span>
+  <span class="c-key">remediate</span>:
+    <span class="c-key">needs</span>: scan
+    <span class="c-key">runs-on</span>: ubuntu-latest
+    <span class="c-key">permissions</span>:
+      contents: write              <span class="c-dim"># push the vra/* branches</span>
+      pull-requests: write         <span class="c-dim"># open / update the PRs</span>
+      issues: write                <span class="c-dim"># the secrets issue</span>
+    <span class="c-key">steps</span>:
+      - <span class="c-key">uses</span>: actions/checkout@v4
+        <span class="c-key">with</span>:
+          ref: ${{ github.sha }}   <span class="c-dim"># exactly the commit that was scanned</span>
+          <span class="c-key">fetch-depth</span>: 0
+          <span class="c-key">token</span>: ${{ secrets.VRA_TOKEN }}
+
+      <span class="c-dim"># Your build toolchain, so every fix is verified by your build and tests:</span>
+      - <span class="c-key">uses</span>: actions/setup-node@v4
+        <span class="c-key">with</span>: { node-version: &quot;20&quot; }
+
+      - <span class="c-key">name</span>: Install VRA+
+        <span class="c-key">run</span>: curl -fsSLo vra &quot;$VRA_URL&quot; &amp;&amp; chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
+
+      - <span class="c-key">name</span>: Get the scan report from stage 1
+        <span class="c-key">uses</span>: actions/download-artifact@v4
+        <span class="c-key">with</span>:
+          <span class="c-key">name</span>: vra-scan-report
+          <span class="c-key">path</span>: vra-reports
+
+      - <span class="c-key">name</span>: Remediate and open the PR
         <span class="c-key">env</span>:
-          <span class="c-key">GITHUB_TOKEN</span>: ${{ secrets.VRA_TOKEN }}</code></pre>
+          <span class="c-dim"># A personal or app token: PRs opened with the default GITHUB_TOKEN</span>
+          <span class="c-dim"># don&#x27;t trigger your CI. Needs Contents, Pull requests, Issues and</span>
+          <span class="c-dim"># Workflows: Read and write.</span>
+          <span class="c-key">GITHUB_TOKEN</span>: ${{ secrets.VRA_TOKEN }}
+        <span class="c-dim"># Exit code 2 = some fixes need a human (draft PRs opened): not a failure.</span>
+        <span class="c-key">run</span>: vra remediate --open-pr --report vra-reports/scan-report.json || [ $? -eq 2 ]</code></pre>
           </div>
           <div class="code tabs__panel" role="tabpanel" id="ci-gl" aria-labelledby="t-ci-gl" hidden>
             <div class="code__bar"><p>.gitlab-ci.yml</p><button class="copy" data-copy="ci-snippet-gl">Copy</button></div>
-<pre id="ci-snippet-gl"><code><span class="c-key">vra</span>:
+<pre id="ci-snippet-gl"><code><span class="c-key">stages</span>: [scan, remediate]
+
+<span class="c-key">variables</span>:
+  <span class="c-key">VRA_URL</span>: https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
+
+<span class="c-key">.vra</span>:
+  image: python:3.12               <span class="c-dim"># an image with your build toolchain</span>
+  <span class="c-key">before_script</span>:
+    - curl -fsSLo /usr/local/bin/vra &quot;$VRA_URL&quot; &amp;&amp; chmod +x /usr/local/bin/vra
   <span class="c-key">rules</span>:
-    - <span class="c-key">if</span>: <span class="c-str">$CI_PIPELINE_SOURCE == "schedule"</span>
-    - <span class="c-key">if</span>: <span class="c-str">$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH</span>
-  <span class="c-key">variables</span>:
-    <span class="c-key">GIT_DEPTH</span>: 0
+    - if: $CI_PIPELINE_SOURCE == &quot;schedule&quot;           <span class="c-dim"># weekly schedule</span>
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH     <span class="c-dim"># e.g. after a VRA+ MR is merged</span>
+
+<span class="c-dim"># ── Stage 1: scan, and publish the report ────────────────────────────</span>
+<span class="c-key">vra-scan</span>:
+  <span class="c-key">extends</span>: .vra
+  <span class="c-key">stage</span>: scan
   <span class="c-key">script</span>:
-    - curl -fsSLo vra https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
-    - chmod +x vra &amp;&amp; mv vra /usr/local/bin/
     - vra scan --no-fail .
-    <span class="c-dim"># GITLAB_TOKEN: api + write_repository</span>
-    - git remote set-url origin
-        <span class="c-str">"https://oauth2:$GITLAB_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"</span>
-    - vra remediate --open-pr || [ $? -eq 2 ]</code></pre>
+  <span class="c-key">artifacts</span>:
+    <span class="c-key">paths</span>: [vra-reports/scan-report.json]
+    <span class="c-key">expire_in</span>: 7 days
+
+<span class="c-dim"># ── Stage 2: fix what stage 1 found ──────────────────────────────────</span>
+<span class="c-key">vra-remediate</span>:
+  <span class="c-key">extends</span>: .vra
+  <span class="c-key">stage</span>: remediate
+  needs: [vra-scan]                <span class="c-dim"># same commit; downloads the scan report</span>
+  <span class="c-key">variables</span>:
+    GIT_DEPTH: 0                   <span class="c-dim"># full history to branch from</span>
+  <span class="c-key">script</span>:
+    <span class="c-dim"># GITLAB_TOKEN: a masked CI/CD variable holding a project access token</span>
+    <span class="c-dim"># with the api + write_repository scopes (CI_JOB_TOKEN can&#x27;t open MRs).</span>
+    - git remote set-url origin &quot;https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git&quot;
+    <span class="c-dim"># Exit code 2 = some fixes need a human (draft MRs opened): not a failure.</span>
+    - vra remediate --open-pr --report vra-reports/scan-report.json || [ $? -eq 2 ]</code></pre>
           </div>
         </div>
       </div>
