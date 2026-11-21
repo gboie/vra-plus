@@ -91,7 +91,6 @@
         <details class="flag" id="token-github">
           <summary><span class="flag__name">GitHub: create a token</span><span class="flag__val">fine-grained PAT</span></summary>
           <div class="flag__body">
-            <p><strong>Already use the GitHub CLI?</strong> If <code>gh auth status</code> says you're logged in, skip this: with no token set, VRA+ reuses your <code>gh</code> login (turn it off with <code>github.use_gh_login: false</code>).</p>
             <ol class="guide__steps">
               <li>Open <a href="https://github.com/settings/personal-access-tokens/new" rel="noopener">github.com/settings/personal-access-tokens/new</a> — or your profile picture → <strong>Settings</strong> → <strong>Developer settings</strong> → <strong>Personal access tokens</strong> → <strong>Fine-grained tokens</strong> → <strong>Generate new token</strong>.</li>
               <li><strong>Token name</strong>: e.g. <code>vra-plus</code>. <strong>Expiration</strong>: pick a date (90 days is sensible).</li>
@@ -148,7 +147,7 @@ gitlab:
   token: glpat-xxxx
   url: https://gitlab.com        <span class="c-dim"># self-managed: https://gitlab.company.com</span></code></pre>
             <p><strong>Don't put a token in the repository's <code>vra.yaml</code></strong> — that file is meant to be committed.</p>
-            <p><strong>Which one wins</strong> (first found). GitHub: <code>github.token</code> (config file, overridden by <code>VRA__GITHUB__TOKEN</code>) → <code>GITHUB_TOKEN</code> → <code>GH_TOKEN</code> → your <code>gh</code> login → no-token mode. GitLab: <code>gitlab.token</code> (overridden by <code>VRA__GITLAB__TOKEN</code>) → <code>GITLAB_TOKEN</code> → no-token mode. GitHub or GitLab is picked from the <code>origin</code> remote.</p>
+            <p><strong>Which one wins</strong> (first found). GitHub: <code>github.token</code> (config file, overridden by <code>VRA__GITHUB__TOKEN</code>) → <code>GITHUB_TOKEN</code> → <code>GH_TOKEN</code> → no-token mode. GitLab: <code>gitlab.token</code> (overridden by <code>VRA__GITLAB__TOKEN</code>) → <code>GITLAB_TOKEN</code> → no-token mode. GitHub or GitLab is picked from the <code>origin</code> remote.</p>
           </div>
         </details>
 
@@ -931,7 +930,7 @@ vra remediate --open-pr || [ $? -eq 2 ]</code></pre>
       <!-- ─── vra config ───────────────────────────────────────────── -->
       <section class="doc-sec" id="config">
         <h2><code>vra config</code></h2>
-        <p>Print the effective configuration after merging the config file, environment variables and defaults. Tokens and keys are always shown as <code>***</code>, so it's safe to share. The <code>auth</code> section says where each token comes from (<code>GITHUB_TOKEN</code>, your <code>gh</code> login, none…).</p>
+        <p>Print the effective configuration after merging the config file, environment variables and defaults. Tokens and keys are always shown as <code>***</code>, so it's safe to share. The <code>auth</code> section says where each token comes from (<code>GITHUB_TOKEN</code>, the config file, none…).</p>
 <p class="guide-link"><a href="#guide-config">vra config guide →</a></p>
 <pre class="doc-code"><code>vra config
 vra --format json config | jq .scanner   <span class="c-dim"># JSON only, script-friendly</span>
@@ -1044,8 +1043,7 @@ export VRA__GITLAB__URL=https://gitlab.example.com</code></pre>
                   <tr><td><code>output.color</code></td><td><code>true</code></td><td>Coloured terminal output</td></tr>
                   <tr><td><code>output.verbose</code></td><td><code>false</code></td><td>Same as <code>--verbose</code></td></tr>
                   <tr><td><code>github.url</code></td><td><code>https://api.github.com</code></td><td>API base (GitHub Enterprise: <code>https://ghe.example.com/api/v3</code>)</td></tr>
-                  <tr><td><code>github.token</code></td><td>—</td><td>Falls back to <code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code> / your <code>gh</code> login (<a href="#token-github">create one</a>)</td></tr>
-                  <tr><td><code>github.use_gh_login</code></td><td><code>true</code></td><td>With no token, reuse <code>gh auth login</code></td></tr>
+                  <tr><td><code>github.token</code></td><td>—</td><td>Falls back to <code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code> (<a href="#token-github">create one</a>)</td></tr>
                   <tr><td><code>gitlab.url</code></td><td><code>https://gitlab.com</code></td><td>Self-managed GitLab URL</td></tr>
                   <tr><td><code>gitlab.token</code></td><td>—</td><td>Falls back to <code>GITLAB_TOKEN</code>; optional locally — without it the push opens the MR (<a href="#token-gitlab">create one</a>)</td></tr>
                   <tr><td><code>gitlab.project_id</code></td><td>from remote</td><td>Override the detected project</td></tr>
