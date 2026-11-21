@@ -10,7 +10,7 @@
   const sections = [...document.querySelectorAll('.doc-sec')];
 
   // ─── Copy button on every code block ────────────────────────────
-  document.querySelectorAll('.doc-code').forEach((pre) => {
+  document.querySelectorAll('.doc-code:not(.doc-code--tree)').forEach((pre) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'copy copy--float';
@@ -80,10 +80,18 @@
   });
 
   // ─── Open the flag a link points at (#scan etc. just scroll) ────
-  if (location.hash) {
-    const target = document.querySelector(location.hash);
+  // Links to a guide or accordion (e.g. #guide-apply) open it.
+  const openTarget = (hash) => {
+    if (!hash || hash.length < 2) return;
+    const target = document.getElementById(hash.slice(1));
     if (target && target.tagName === 'DETAILS') target.open = true;
-  }
+  };
+  openTarget(location.hash);
+  window.addEventListener('hashchange', () => openTarget(location.hash));
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (a) openTarget(a.getAttribute('href'));
+  });
 
   // ─── Highlight the current section in the sidebar ───────────────
   const links = new Map(

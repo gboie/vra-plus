@@ -89,7 +89,7 @@
             <span></span><span></span><span></span>
             <p>~/my-app</p>
           </div>
-<pre class="terminal__body"><code><span class="t-line"><span class="t-prompt">$</span> vra scan --scanner all .</span>
+<pre class="terminal__body"><code><span class="t-line"><span class="t-prompt">$</span> vra scan .</span>
 <span class="t-line t-dim">  trivy · semgrep · checkov  ──  63 findings</span>
 <span class="t-line">  <span class="t-crit">CRITICAL 1</span>  <span class="t-high">HIGH 25</span>  <span class="t-med">MEDIUM 37</span></span>
 <span class="t-line"> </span>
@@ -429,7 +429,7 @@
       - <span class="c-key">run</span>: |
           curl -fsSLo vra https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
           chmod +x vra &amp;&amp; sudo mv vra /usr/local/bin/
-      - <span class="c-key">run</span>: vra scan --scanner all --no-fail .
+      - <span class="c-key">run</span>: vra scan --no-fail .
       - <span class="c-key">run</span>: vra remediate --open-pr || [ $? -eq 2 ]
         <span class="c-key">env</span>:
           <span class="c-key">GITHUB_TOKEN</span>: ${{ secrets.VRA_TOKEN }}</code></pre>
@@ -445,7 +445,7 @@
   <span class="c-key">script</span>:
     - curl -fsSLo vra https://github.com/gboie/vra-plus/releases/latest/download/vra-linux-amd64
     - chmod +x vra &amp;&amp; mv vra /usr/local/bin/
-    - vra scan --scanner all --no-fail .
+    - vra scan --no-fail .
     <span class="c-dim"># GITLAB_TOKEN: api + write_repository</span>
     - git remote set-url origin
         <span class="c-str">"https://oauth2:$GITLAB_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"</span>
@@ -545,7 +545,7 @@ vra --version</code></pre>
         </div>
 
         <div class="quick reveal">
-          <div class="quick__step"><span>1</span><code>vra scan --scanner all .</code><p>see what's wrong</p></div>
+          <div class="quick__step"><span>1</span><code>vra scan .</code><p>see what's wrong</p></div>
           <div class="quick__step"><span>2</span><code>vra remediate</code><p>preview the plan — touches nothing</p></div>
           <div class="quick__step"><span>3</span><code>vra remediate --apply</code><p>verified fixes on a local branch</p></div>
           <div class="quick__step"><span>4</span><code>vra remediate --open-pr</code><p>push and open the PR</p></div>

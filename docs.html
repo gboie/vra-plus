@@ -51,6 +51,7 @@
       </label>
       <nav class="docs__toc">
         <a href="#quickstart">Quick start</a>
+        <a href="#guides">Command guides</a>
         <a href="#global">Global options</a>
         <a href="#scan"><code>vra scan</code></a>
         <a href="#remediate"><code>vra remediate</code></a>
@@ -76,8 +77,8 @@
       <section class="doc-sec" id="quickstart">
         <h2>Quick start</h2>
         <p>The usual flow: scan, preview the fixes, apply them locally, then open a PR/MR.</p>
-<pre class="doc-code"><code><span class="c-dim"># 1. Scan with every bundled scanner (writes vra-reports/scan-report.json)</span>
-vra scan --scanner all .
+<pre class="doc-code"><code><span class="c-dim"># 1. Scan with all three bundled scanners (writes vra-reports/scan-report.json)</span>
+vra scan .
 
 <span class="c-dim"># 2. Preview the fixes — touches nothing</span>
 vra remediate
@@ -87,6 +88,235 @@ vra remediate --apply
 
 <span class="c-dim"># 4. Push and open the PR/MR, drafts and secrets issue (needs a token)</span>
 GITHUB_TOKEN=… vra remediate --open-pr</code></pre>
+      </section>
+
+      <!-- ─── Command guides ───────────────────────────────────────── -->
+      <section class="doc-sec" id="guides">
+        <h2>Command guides</h2>
+        <p>The five commands you'll run most — when you need each one, and exactly what it does.</p>
+
+        <div class="guides">
+          <!-- vra scan -->
+          <details class="guide" id="guide-scan">
+            <summary>
+              <span class="guide__num">1</span>
+              <span class="guide__title"><code>vra scan</code><span>See what's vulnerable</span></span>
+            </summary>
+            <div class="guide__body">
+              <div class="guide__when">
+                <p class="guide__label">When do you need it?</p>
+                <p>Whenever you need to know your security exposure: on every pull request, before a release, on a schedule for code nobody is changing (new CVEs are published daily against old code), when you inherit a codebase, or when a customer or auditor asks for evidence. It's always the first step — <code>vra remediate</code> works from its report.</p>
+              </div>
+
+              <h3>What happens, step by step</h3>
+              <ol class="guide__steps">
+                <li><strong>Picks the scanners.</strong> All three by default. A target that isn't a local path is treated as a container image and scanned with Trivy only.</li>
+                <li><strong>Refreshes what it knows.</strong> Trivy downloads the latest vulnerability database and Semgrep fetches the latest registry rules. Air-gapped? Set <code>scanner.update_db</code> / <code>update_rules</code> to <code>false</code> to scan offline with bundled rules.</li>
+                <li><strong>Runs each scanner on the target.</strong> Trivy reads manifests, lockfiles and images; Semgrep reads source code; Checkov reads IaC, Dockerfiles and CI configs, skipping <code>node_modules</code>, <code>build</code>, <code>vendor</code> and similar. Each scanner has a time limit (<code>scanner.timeout_seconds</code>, 300 s).</li>
+                <li><strong>Normalises the findings</strong> into one format — severity, CVE or rule ID, package and fixed version, file and line — keeps those at or above <code>--severity</code>, and groups them by type: SCA, Container, SAST, IaC, Secrets.</li>
+                <li><strong>Applies the fail policy:</strong> counts findings per severity against the <code>--max-*</code> limits.</li>
+                <li><strong>Writes the report</strong> <code>vra-reports/scan-report.json</code> — every finding, whether it has a known fix, and the policy result.</li>
+              </ol>
+
+              <h3>What you get</h3>
+              <ul class="guide__list">
+                <li>A terminal report grouped by type, coloured by the worst severity in each group</li>
+                <li><code>vra-reports/scan-report.json</code> for <code>vra remediate</code>, dashboards or scripts</li>
+                <li>Exit code <code>1</code> when the policy is breached, <code>0</code> otherwise — so a pipeline can block on it</li>
+              </ul>
+
+              <h3>Good to know</h3>
+              <ul class="guide__list">
+                <li><strong>Read-only.</strong> It never changes your code.</li>
+                <li>Needs network access for the database and rule updates, unless you turn them off.</li>
+                <li>A scanner that can't run is shown in the summary — never silently skipped.</li>
+              </ul>
+<pre class="doc-code"><code>vra scan .                               <span class="c-dim"># all three scanners</span>
+vra scan --no-fail --severity MEDIUM .   <span class="c-dim"># CI reporting step</span></code></pre>
+              <p class="guide__more"><a href="#scan">All <code>vra scan</code> flags →</a></p>
+            </div>
+          </details>
+
+          <!-- vra remediate (plan) -->
+          <details class="guide" id="guide-plan">
+            <summary>
+              <span class="guide__num">2</span>
+              <span class="guide__title"><code>vra remediate</code><span>Preview the fixes</span></span>
+            </summary>
+            <div class="guide__body">
+              <div class="guide__when">
+                <p class="guide__label">When do you need it?</p>
+                <p>Right after a scan, to answer <em>“how much of this can be fixed automatically, and what exactly would change?”</em> — for sprint planning, estimating the effort left for humans, or reviewing the plan before you let VRA+ touch a repository. It's safe to run anywhere: no build tools, no git changes.</p>
+              </div>
+
+              <h3>What happens, step by step</h3>
+              <ol class="guide__steps">
+                <li><strong>Reads the scan report</strong> (<code>vra-reports/scan-report.json</code>, or <code>--report</code>). It doesn't re-scan.</li>
+                <li><strong>Works out a fix for each finding:</strong>
+                  <ul>
+                    <li><em>Dependencies</em> — the lowest version that closes every CVE for that package, respecting release lines; major upgrades are flagged for review.</li>
+                    <li><em>Code</em> — the fix that ships with the Semgrep rule.</li>
+                    <li><em>Dockerfiles</em> and <em>CI workflows</em> — VRA+'s built-in hardening and SHA pinning.</li>
+                    <li><em>Secrets</em> — listed for the rotation issue, never patched.</li>
+                    <li><em>Everything else</em> — listed as manual, so nothing silently disappears.</li>
+                  </ul>
+                </li>
+                <li><strong>Applies your filters:</strong> <code>--kind</code>, <code>--only</code>, <code>remediation.kinds</code> and <code>remediation.autofix_exclude</code>.</li>
+                <li><strong>Prints the plan</strong> and writes it to <code>vra-reports/remediation-plan.json</code>.</li>
+              </ol>
+
+              <h3>What you get</h3>
+              <ul class="guide__list">
+                <li>A table of every planned change: package or rule, current → target version, CVEs closed</li>
+                <li><code>remediation-plan.json</code> for review or tooling</li>
+                <li>Exit code <code>0</code></li>
+              </ul>
+
+              <h3>Good to know</h3>
+              <ul class="guide__list">
+                <li><strong>Changes nothing</strong> — no branch, no build, no commit. Only the report folder is written.</li>
+                <li>The plan says what VRA+ will <em>try</em>; <code>--apply</code> is where each fix has to prove it works.</li>
+              </ul>
+<pre class="doc-code"><code>vra remediate
+vra remediate --kind dependency   <span class="c-dim"># just the upgrades</span></code></pre>
+              <p class="guide__more"><a href="#remediate">All <code>vra remediate</code> flags →</a></p>
+            </div>
+          </details>
+
+          <!-- vra remediate --apply -->
+          <details class="guide" id="guide-apply">
+            <summary>
+              <span class="guide__num">3</span>
+              <span class="guide__title"><code>vra remediate --apply</code><span>Make and prove the fixes locally</span></span>
+            </summary>
+            <div class="guide__body">
+              <div class="guide__when">
+                <p class="guide__label">When do you need it?</p>
+                <p>When you want the fixes <strong>made and proven before anyone else sees them</strong>: a developer clearing a security backlog, a first trial of VRA+ on a repository, or teams that don't want to give a tool an API token. You get ordinary local branches to review, test and push yourself.</p>
+              </div>
+
+              <h3>What happens, step by step</h3>
+              <ol class="guide__steps">
+                <li><strong>Builds the plan</strong> from the scan report, exactly like <code>vra remediate</code>.</li>
+                <li><strong>Makes a separate working copy</strong> — a git worktree in a temporary folder on branch <code>vra/remediate</code>, starting from your current commit. Your folder, branch and uncommitted edits are never touched (and aren't included). The branch is recreated on every run.</li>
+                <li><strong>Checks the untouched code first</strong> — your build, your tests and a <code>docker build</code> of each Dockerfile. A check that already fails can't judge a fix: if the main build is broken, that project's fixes go to a human. A missing tool (no <code>mvn</code>, no <code>docker</code>) means <em>unverified</em>, never passed.</li>
+                <li><strong>Tries each fix, one at a time, most severe first:</strong>
+                  <ul>
+                    <li>apply the change (manifest + lockfile, rule fix, Dockerfile, workflow pin),</li>
+                    <li>run every check again — build, tests, image builds,</li>
+                    <li>re-scan: the CVE must be gone and no new ones added,</li>
+                    <li>all good → <strong>commit</strong> that one change; anything fails → roll back and try the next fixing version (up to 3, <code>--max-candidates</code>).</li>
+                  </ul>
+                </li>
+                <li><strong>Retries</strong> failed fixes on top of later ones — sometimes upgrade B only works once A is in.</li>
+                <li><strong>Saves what failed for a human:</strong> each fix that never passes gets a branch <code>vra/needs-human/&lt;name&gt;</code>, stacked on <code>vra/remediate</code>, with the failing change committed.</li>
+                <li><strong>Cleans up</strong> the temporary copy. If nothing could be fixed, the empty branch is removed too.</li>
+              </ol>
+
+              <h3>What you get</h3>
+<pre class="doc-code doc-code--tree"><code>main                            <span class="c-dim"># your branch — unchanged</span>
+ └─ vra/remediate               <span class="c-dim"># one commit per verified fix</span>
+     ├─ vra/needs-human/pyjwt   <span class="c-dim"># failing change + details</span>
+     └─ vra/needs-human/werkzeug</code></pre>
+              <ul class="guide__list">
+                <li><strong>Local branches only</strong> — nothing is pushed, no PR is opened</li>
+                <li><code>remediation-report.json</code> (fixed, skipped, needs a human — and why) and <code>pr-&lt;repo&gt;.md</code>, a ready-made PR description</li>
+                <li>Exit code <code>0</code> all applied · <code>2</code> some need a human · <code>1</code> error</li>
+              </ul>
+
+              <h3>Good to know</h3>
+              <ul class="guide__list">
+                <li><strong>It runs your project's code</strong> — installs, build scripts, tests, <code>docker build</code> — just as CI would.</li>
+                <li>Commits use your git name and email, and skip git hooks (<code>--no-verify</code>).</li>
+                <li>Re-running replaces <code>vra/remediate</code> — move any commits of your own to another branch first.</li>
+              </ul>
+<pre class="doc-code"><code>vra remediate --apply
+git log --stat main..vra/remediate   <span class="c-dim"># review what was committed</span>
+git push --force origin 'refs/heads/vra/*:refs/heads/vra/*'   <span class="c-dim"># share it yourself</span></code></pre>
+              <p class="guide__more"><a href="#remediate">All <code>vra remediate</code> flags →</a></p>
+            </div>
+          </details>
+
+          <!-- vra remediate --open-pr -->
+          <details class="guide" id="guide-open-pr">
+            <summary>
+              <span class="guide__num">4</span>
+              <span class="guide__title"><code>vra remediate --open-pr</code><span>Deliver the fixes for review</span></span>
+            </summary>
+            <div class="guide__body">
+              <div class="guide__when">
+                <p class="guide__label">When do you need it?</p>
+                <p>When remediation should be <strong>a routine code review instead of a project</strong>: in CI on a weekly schedule or after every merge, so a fresh, verified fix PR/MR is always waiting for the team — or locally, once you're happy with what <code>--apply</code> produced. It's how security work reaches the people who own the code, in the tool they already use.</p>
+              </div>
+
+              <h3>What happens, step by step</h3>
+              <ol class="guide__steps">
+                <li><strong>Everything <code>--apply</code> does</strong> — the same isolated, verified, one-fix-at-a-time run.</li>
+                <li><strong>Finds your provider</strong> from the <code>origin</code> remote — GitHub, GitHub Enterprise (<code>github.url</code>), GitLab or self-managed GitLab (<code>gitlab.url</code>) — and a token: <code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code>, <code>GITLAB_TOKEN</code> / <code>CI_JOB_TOKEN</code>, or config. No token → it stops before pushing anything.</li>
+                <li><strong>Pushes the branches</strong> (<code>vra/remediate</code> and <code>vra/needs-human/*</code>, force-pushed because they're regenerated each run) with your own git credentials — SSH or HTTPS.</li>
+                <li><strong>Opens or updates the PR/MR</strong> from <code>vra/remediate</code> into the branch you ran it from, labelled <code>security</code>, <code>vra</code>. The description lists each fix, the CVEs it closes, how it was verified, and what deserves a closer review.</li>
+                <li><strong>Opens or updates a draft PR/MR</strong> for each fix that needs a human — based on the remediation branch, labelled <code>vra:needs-human</code>, with the failure output and what was tried — and links the drafts from the main PR/MR.</li>
+                <li><strong>Closes drafts that are no longer needed</strong> — when a fix that used to fail now passes, its draft is closed with a note.</li>
+                <li><strong>Opens or updates one secrets issue</strong> listing each hardcoded secret by file, line and type (never the value) with revoke → move → purge-history steps.</li>
+              </ol>
+
+              <h3>What you get</h3>
+              <ul class="guide__list">
+                <li>Links to the PR/MR, drafts and issue in the output</li>
+                <li>The same report files as <code>--apply</code>, plus <code>secrets-&lt;repo&gt;.md</code></li>
+                <li>Exit code <code>0</code> · <code>2</code> some fixes need a human (drafts opened) · <code>1</code> error</li>
+              </ul>
+
+              <h3>Good to know</h3>
+              <ul class="guide__list">
+                <li><strong>Idempotent.</strong> Re-running updates the same PR/MR, drafts and issue — never duplicates.</li>
+                <li><strong>Token permissions:</strong> with an SSH remote, PR + issue write is enough (GitLab: <code>api</code>). In CI, where the token also pushes, add contents + workflows write (GitLab: <code>write_repository</code>).</li>
+                <li>In GitHub Actions, use a personal or app token: PRs opened with the default <code>GITHUB_TOKEN</code> don't trigger your CI.</li>
+              </ul>
+<pre class="doc-code"><code>GITHUB_TOKEN=… vra remediate --open-pr
+vra remediate --open-pr || [ $? -eq 2 ]   <span class="c-dim"># in CI: "needs a human" isn't a failure</span></code></pre>
+              <p class="guide__more"><a href="#ci-access">What access you need →</a></p>
+            </div>
+          </details>
+
+          <!-- vra config -->
+          <details class="guide" id="guide-config">
+            <summary>
+              <span class="guide__num">5</span>
+              <span class="guide__title"><code>vra config</code><span>Check the settings VRA+ will use</span></span>
+            </summary>
+            <div class="guide__body">
+              <div class="guide__when">
+                <p class="guide__label">When do you need it?</p>
+                <p>Before rolling VRA+ out to a team or pipeline, and whenever a run doesn't behave as expected — <em>“why did it only run one scanner?”</em>, <em>“is CI picking up my environment variables?”</em>. It shows which config file was found and the final value of every setting.</p>
+              </div>
+
+              <h3>What happens, step by step</h3>
+              <ol class="guide__steps">
+                <li><strong>Finds the config file</strong> — <code>--config</code>, or the first of <code>./vra.yaml</code>, <code>./vra.yml</code>, <code>~/.config/vra+/config.yaml</code>, … (see <a href="#configuration">Configuration</a>).</li>
+                <li><strong>Merges the sources:</strong> defaults, then the file, then <code>VRA__SECTION__KEY</code> environment variables, then global flags — the highest wins.</li>
+                <li><strong>Masks secrets</strong> — tokens and keys show as <code>***</code>.</li>
+                <li><strong>Prints the result</strong> as tables, or as JSON with <code>--format json</code>.</li>
+              </ol>
+
+              <h3>What you get</h3>
+              <ul class="guide__list">
+                <li>Every setting with its effective value, by section: <code>scanner</code>, <code>remediation</code>, <code>output</code>, <code>github</code>, <code>gitlab</code></li>
+                <li>JSON you can pipe into <code>jq</code> or a script</li>
+              </ul>
+
+              <h3>Good to know</h3>
+              <ul class="guide__list">
+                <li><strong>Changes nothing</strong> and needs no network.</li>
+                <li>Safe to paste into a support request — secrets are always masked.</li>
+              </ul>
+<pre class="doc-code"><code>vra config
+vra --format json config | jq .scanner.enabled
+VRA__SCANNER__SEVERITY_THRESHOLD=MEDIUM vra config   <span class="c-dim"># check an override</span></code></pre>
+              <p class="guide__more"><a href="#config">More on <code>vra config</code> →</a></p>
+            </div>
+          </details>
+        </div>
       </section>
 
       <!-- ─── Global options ──────────────────────────────────────── -->
@@ -101,7 +331,7 @@ GITHUB_TOKEN=… vra remediate --open-pr</code></pre>
             <div class="flag__body">
               <p>Path to a <code>vra.yaml</code> config file. Overrides the <a href="#configuration">auto-discovery order</a>.</p>
               <p class="flag__env">Env var: <code>VRA_CONFIG_FILE</code></p>
-<pre class="doc-code"><code>vra --config ./team-config.yaml scan --scanner all ./myservice</code></pre>
+<pre class="doc-code"><code>vra --config ./team-config.yaml scan ./myservice</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -110,7 +340,7 @@ GITHUB_TOKEN=… vra remediate --open-pr</code></pre>
               <p>Output format on stdout. <code>rich</code> is the colour terminal report; <code>json</code> and <code>sarif</code> are machine-readable (SARIF uploads to code-scanning dashboards). The report file is written either way.</p>
               <p class="flag__env">Env var: <code>VRA_OUTPUT_FORMAT</code></p>
 <pre class="doc-code"><code>vra --format json scan . &gt; findings.json
-vra --format sarif scan --scanner all . &gt; vra.sarif</code></pre>
+vra --format sarif scan . &gt; vra.sarif</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -153,30 +383,32 @@ vra --format sarif scan --scanner all . &gt; vra.sarif</code></pre>
       <section class="doc-sec" id="scan">
         <h2><code>vra scan</code></h2>
         <p>Scan a directory or container image with Trivy, Semgrep and/or Checkov. Findings are grouped by type — SCA, Container, SAST, IaC, Secrets — and a report is always written to <code>vra-reports/scan-report.json</code>, which <code>vra remediate</code> and <code>vra validate</code> read.</p>
+<p class="guide-link">When to use it and what happens, step by step: <a href="#guide-scan">vra scan guide →</a></p>
 <pre class="doc-code"><code>vra scan [OPTIONS] TARGET</code></pre>
 
         <div class="flags">
           <details class="flag">
             <summary><code class="flag__name">TARGET</code><span class="flag__val">path | image</span><span class="flag__def flag__def--req">required</span></summary>
             <div class="flag__body">
-              <p>What to scan: a directory, a file, or a container image reference. Trivy detects image vs filesystem automatically.</p>
+              <p>What to scan: a directory, a file, or a container image reference. A target that isn't a local path is treated as an image and scanned with Trivy.</p>
 <pre class="doc-code"><code>vra scan .
 vra scan ./services/api
 vra scan nginx:1.25</code></pre>
             </div>
           </details>
           <details class="flag">
-            <summary><code class="flag__name">--scanner, -s</code><span class="flag__val">trivy | semgrep | checkov | all</span><span class="flag__def">trivy</span></summary>
+            <summary><code class="flag__name">--scanner, -s</code><span class="flag__val">trivy | semgrep | checkov | all</span><span class="flag__def">all</span></summary>
             <div class="flag__body">
-              <p>Which scanner to run. <code>all</code> runs the three together.</p>
+              <p>Which scanner to run. Without the flag, all three run — they're bundled in the binary. Pick one to narrow the scan.</p>
               <ul class="doc-list">
                 <li><strong>trivy</strong> — dependencies (SCA), container images, secrets</li>
                 <li><strong>semgrep</strong> — source code (SAST)</li>
                 <li><strong>checkov</strong> — IaC, Dockerfiles, CI configs, secrets</li>
               </ul>
-              <p class="flag__env">Default comes from <code>scanner.enabled</code> in config (<code>VRA__SCANNER__ENABLED</code>).</p>
-<pre class="doc-code"><code>vra scan --scanner all .
-vra scan -s checkov ./infra</code></pre>
+              <p>A container image (any target that isn't a local path) is always scanned with Trivy only — Semgrep and Checkov read files.</p>
+              <p class="flag__env">Change the default with <code>scanner.enabled</code> in config (<code>VRA__SCANNER__ENABLED=trivy,semgrep</code>).</p>
+<pre class="doc-code"><code>vra scan .                    <span class="c-dim"># all three</span>
+vra scan -s checkov ./infra   <span class="c-dim"># just IaC + secrets</span></code></pre>
             </div>
           </details>
           <details class="flag">
@@ -184,7 +416,7 @@ vra scan -s checkov ./infra</code></pre>
             <div class="flag__body">
               <p>Minimum severity to report. Lower-severity findings are left out of the output and the report.</p>
               <p class="flag__env">Config: <code>scanner.severity_threshold</code> · Env: <code>VRA__SCANNER__SEVERITY_THRESHOLD</code></p>
-<pre class="doc-code"><code>vra scan --scanner all --severity MEDIUM .</code></pre>
+<pre class="doc-code"><code>vra scan --severity MEDIUM .</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -192,7 +424,7 @@ vra scan -s checkov ./infra</code></pre>
             <div class="flag__body">
               <p>With <code>--fail</code>, the scan exits <code>1</code> when the fail policy (the <code>--max-*</code> limits) is breached — use it to gate a pipeline. <code>--no-fail</code> always exits <code>0</code> for a reporting-only step; the report is still written.</p>
 <pre class="doc-code"><code><span class="c-dim"># Report only — never break the build</span>
-vra scan --scanner all --no-fail .</code></pre>
+vra scan --no-fail .</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -200,7 +432,7 @@ vra scan --scanner all --no-fail .</code></pre>
             <div class="flag__body">
               <p>How many CRITICAL findings are allowed before the scan fails. <code>0</code> = any CRITICAL fails; <code>-1</code> = no limit.</p>
               <p class="flag__env">Config: <code>scanner.fail_policy.critical</code></p>
-<pre class="doc-code"><code>vra scan --scanner all --max-critical 0 .</code></pre>
+<pre class="doc-code"><code>vra scan --max-critical 0 .</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -209,7 +441,7 @@ vra scan --scanner all --no-fail .</code></pre>
               <p>How many HIGH findings are allowed before the scan fails. <code>0</code> = any HIGH fails; <code>-1</code> = no limit.</p>
               <p class="flag__env">Config: <code>scanner.fail_policy.high</code></p>
 <pre class="doc-code"><code><span class="c-dim"># Fail only on CRITICAL; allow any number of HIGH</span>
-vra scan --scanner all --max-critical 0 --max-high -1 .</code></pre>
+vra scan --max-critical 0 --max-high -1 .</code></pre>
             </div>
           </details>
           <details class="flag">
@@ -233,10 +465,10 @@ vra scan --scanner all --max-critical 0 --max-high -1 .</code></pre>
           <summary><span class="flag__name">More examples</span></summary>
           <div class="flag__body">
 <pre class="doc-code"><code><span class="c-dim"># Everything at MEDIUM and above, never fail (typical CI reporting step)</span>
-vra scan --scanner all --severity MEDIUM --no-fail .
+vra scan --severity MEDIUM --no-fail .
 
 <span class="c-dim"># Gate a pipeline: block on any CRITICAL or HIGH</span>
-vra scan --scanner all --max-critical 0 --max-high 0 .
+vra scan --max-critical 0 --max-high 0 .
 
 <span class="c-dim"># Scan a built image before pushing it</span>
 vra scan --scanner trivy registry.example.com/app:1.4.2
@@ -245,7 +477,7 @@ vra scan --scanner trivy registry.example.com/app:1.4.2
 vra scan --scanner checkov --severity MEDIUM .
 
 <span class="c-dim"># SARIF for a code-scanning dashboard</span>
-vra --format sarif scan --scanner all . &gt; vra.sarif</code></pre>
+vra --format sarif scan . &gt; vra.sarif</code></pre>
           </div>
         </details>
       </section>
@@ -254,6 +486,7 @@ vra --format sarif scan --scanner all . &gt; vra.sarif</code></pre>
       <section class="doc-sec" id="remediate">
         <h2><code>vra remediate</code></h2>
         <p>Fix what <code>vra scan</code> found — dependency upgrades, Semgrep rule fixes, Dockerfile hardening and CI pinning — each verified by your build, tests and a re-scan. Secrets are never patched; they are reported in an issue for rotation. It reads the scan report; it doesn't re-scan the whole project.</p>
+<p class="guide-link">Step-by-step guides: <a href="#guide-plan">plan</a> · <a href="#guide-apply">--apply</a> · <a href="#guide-open-pr">--open-pr</a></p>
 <pre class="doc-code"><code>vra remediate [OPTIONS]</code></pre>
 
         <div class="modes">
@@ -273,6 +506,7 @@ vra --format sarif scan --scanner all . &gt; vra.sarif</code></pre>
           <details class="flag">
             <summary><code class="flag__name">--apply</code><span class="flag__val">flag</span><span class="flag__def">off</span></summary>
             <div class="flag__body">
+              <p><a href="#guide-apply">Full walkthrough →</a></p>
               <p>Apply fixes on a local branch, <code>vra/remediate</code>, one at a time in an isolated git worktree. Each fix must pass your build, your tests, a <code>docker build</code> of every Dockerfile, and a re-scan — otherwise it's rolled back and kept on a <code>vra/needs-human/&lt;name&gt;</code> branch with the failure output. Your working tree is never touched.</p>
 <pre class="doc-code"><code>vra remediate --apply
 git log --stat main..vra/remediate</code></pre>
@@ -355,7 +589,7 @@ vra remediate --apply --verify-command "make ci"</code></pre>
           </details>
         </div>
 
-        <details class="flag flag--examples">
+        <details class="flag flag--examples" id="ci-access">
           <summary><span class="flag__name">What access you need</span></summary>
           <div class="flag__body">
             <table class="doc-table">
@@ -412,8 +646,9 @@ vra remediate --open-pr || [ $? -eq 2 ]</code></pre>
       <section class="doc-sec" id="config">
         <h2><code>vra config</code></h2>
         <p>Print the effective configuration after merging the config file, environment variables and defaults. Tokens and keys are always shown as <code>***</code>, so it's safe to share.</p>
+<p class="guide-link"><a href="#guide-config">vra config guide →</a></p>
 <pre class="doc-code"><code>vra config
-vra --format json config
+vra --format json config | jq .scanner   <span class="c-dim"># JSON only, script-friendly</span>
 vra --config ./team-config.yaml config</code></pre>
       </section>
 
@@ -475,7 +710,7 @@ export VRA__GITLAB__URL=https://gitlab.example.com</code></pre>
               <table class="doc-table">
                 <thead><tr><th>Key</th><th>Default</th><th>Meaning</th></tr></thead>
                 <tbody>
-                  <tr><td><code>enabled</code></td><td><code>[trivy]</code></td><td>Scanners used when <code>--scanner</code> isn't given</td></tr>
+                  <tr><td><code>enabled</code></td><td><code>[trivy, semgrep, checkov]</code></td><td>Scanners used when <code>--scanner</code> isn't given</td></tr>
                   <tr><td><code>severity_threshold</code></td><td><code>HIGH</code></td><td>Minimum severity reported</td></tr>
                   <tr><td><code>timeout_seconds</code></td><td><code>300</code></td><td>Per-scanner timeout</td></tr>
                   <tr><td><code>update_db</code></td><td><code>true</code></td><td>Fetch the latest Trivy vulnerability database</td></tr>
