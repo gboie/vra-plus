@@ -50,6 +50,7 @@
         <input type="search" id="doc-filter" placeholder="Filter flags…  e.g. --severity" autocomplete="off" />
       </label>
       <nav class="docs__toc">
+        <a href="#connect">Step 1 · Connect</a>
         <a href="#quickstart">Quick start</a>
         <a href="#guides">Command guides</a>
         <a href="#pipelines">CI/CD pipelines</a>
@@ -74,6 +75,134 @@
         </div>
       </header>
 
+      <!-- ─── Connect (step 1) ────────────────────────────────────── -->
+      <section class="doc-sec" id="connect">
+        <h2>Step 1 · Connect to GitHub or GitLab</h2>
+        <p><strong>Do this first.</strong> <code>vra scan</code> and <code>vra remediate --apply</code> work on any clone and need no account. For <code>vra remediate --open-pr</code> to open pull requests (GitHub) or merge requests (GitLab), VRA+ talks to your git host. The push always uses your own git credentials (SSH key or HTTPS login); a token is only used for the API.</p>
+        <table class="doc-table doc-table--wide">
+          <thead><tr><th></th><th>GitHub</th><th>GitLab</th></tr></thead>
+          <tbody>
+            <tr><td><strong>With a token</strong></td><td>Opens and updates the PR, a draft per fix that needs a human, and the secrets issue; closes drafts that are no longer needed</td><td>The same, for MRs</td></tr>
+            <tr><td><strong>No token</strong><br />(your machine)</td><td>Pushes the branches and prints a ready-to-click link for each PR</td><td><strong>The push opens the MRs</strong> (git push options); a link for the secrets issue</td></tr>
+            <tr><td><strong>In CI</strong></td><td>Token required</td><td>Token required (<code>CI_JOB_TOKEN</code> can't push or open MRs)</td></tr>
+          </tbody>
+        </table>
+
+        <details class="flag" id="token-github">
+          <summary><span class="flag__name">GitHub: create a token</span><span class="flag__val">fine-grained PAT</span></summary>
+          <div class="flag__body">
+            <p><strong>Already use the GitHub CLI?</strong> If <code>gh auth status</code> says you're logged in, skip this: with no token set, VRA+ reuses your <code>gh</code> login (turn it off with <code>github.use_gh_login: false</code>).</p>
+            <ol class="guide__steps">
+              <li>Open <a href="https://github.com/settings/personal-access-tokens/new" rel="noopener">github.com/settings/personal-access-tokens/new</a> — or your profile picture → <strong>Settings</strong> → <strong>Developer settings</strong> → <strong>Personal access tokens</strong> → <strong>Fine-grained tokens</strong> → <strong>Generate new token</strong>.</li>
+              <li><strong>Token name</strong>: e.g. <code>vra-plus</code>. <strong>Expiration</strong>: pick a date (90 days is sensible).</li>
+              <li><strong>Resource owner</strong>: you, or the organization that owns the repository. Organizations can require an admin to approve the token first.</li>
+              <li><strong>Repository access</strong>: <strong>Only select repositories</strong>, then pick the ones VRA+ will open PRs on.</li>
+              <li><strong>Permissions → Repository permissions</strong>, set the ones in the table below.</li>
+              <li><strong>Generate token</strong> and copy it (starts with <code>github_pat_</code>). GitHub shows it once.</li>
+            </ol>
+            <table class="doc-table">
+              <thead><tr><th>Permission</th><th>Access</th><th>Why</th></tr></thead>
+              <tbody>
+                <tr><td>Pull requests</td><td>Read and write</td><td>open, update and close the PRs</td></tr>
+                <tr><td>Issues</td><td>Read and write</td><td>secrets issue and PR labels</td></tr>
+                <tr><td>Metadata</td><td>Read-only</td><td>added automatically</td></tr>
+                <tr><td>Contents</td><td>Read and write</td><td><em>only if git pushes with this token</em> (HTTPS remote using it, CI)</td></tr>
+                <tr><td>Workflows</td><td>Read and write</td><td><em>only if git pushes with this token</em> — a fix can pin actions in <code>.github/workflows/</code>, and GitHub rejects such pushes without it</td></tr>
+              </tbody>
+            </table>
+            <p>A <strong>classic token</strong> also works (<a href="https://github.com/settings/tokens/new" rel="noopener">github.com/settings/tokens/new</a>, scope <code>repo</code>, plus <code>workflow</code> if git pushes with it), but it reaches every repository you can. <strong>GitHub Enterprise Server:</strong> same steps on your server, then set <code>github.url: https://&lt;host&gt;/api/v3</code>.</p>
+          </div>
+        </details>
+
+        <details class="flag" id="token-gitlab">
+          <summary><span class="flag__name">GitLab: create a token</span><span class="flag__val">optional on your machine</span></summary>
+          <div class="flag__body">
+            <p><strong>Working on your machine only?</strong> You can skip this: without a token, the push opens the MRs (<a href="#no-token-gitlab">see below</a>). Create one for full MR descriptions, the secrets issue opened for you, or CI.</p>
+            <ol class="guide__steps">
+              <li>Open <a href="https://gitlab.com/-/user_settings/personal_access_tokens" rel="noopener">gitlab.com/-/user_settings/personal_access_tokens</a> (self-managed: <code>https://&lt;your-gitlab&gt;/-/user_settings/personal_access_tokens</code>) — or your avatar → <strong>Edit profile</strong> → <strong>Access tokens</strong> → <strong>Add new token</strong>.</li>
+              <li><strong>Token name</strong>: e.g. <code>vra-plus</code>. <strong>Expiration date</strong>: required (at most a year).</li>
+              <li><strong>Scopes</strong>: <code>api</code> — GitLab has no narrower scope that can create MRs. Add <code>write_repository</code> <em>only if git pushes with this token</em> (HTTPS remote using it, CI).</li>
+              <li><strong>Create token</strong> and copy it (starts with <code>glpat-</code>). GitLab shows it once.</li>
+            </ol>
+            <p>You need at least the <strong>Developer</strong> role on the project. <strong>For CI</strong>, prefer a <strong>project access token</strong> — it acts as a bot, not as you: project → <strong>Settings → Access tokens → Add new token</strong>, role <strong>Developer</strong>, scopes <code>api</code> + <code>write_repository</code>. On GitLab.com these need a Premium or Ultimate plan; on self-managed GitLab every tier has them.</p>
+          </div>
+        </details>
+
+        <details class="flag" id="token-add">
+          <summary><span class="flag__name">Add the token to VRA+</span><span class="flag__val">env var or user config</span></summary>
+          <div class="flag__body">
+            <p>An environment variable is best — nothing is written to disk:</p>
+<pre class="doc-code"><code><span class="c-dim"># GitHub — any one of these</span>
+export GITHUB_TOKEN=github_pat_xxxx
+export VRA__GITHUB__TOKEN=github_pat_xxxx
+
+<span class="c-dim"># GitLab — any one of these</span>
+export GITLAB_TOKEN=glpat-xxxx
+export VRA__GITLAB__TOKEN=glpat-xxxx</code></pre>
+            <p>Or your <strong>user</strong> config file, readable only by you:</p>
+<pre class="doc-code"><code>mkdir -p ~/.config/vra+ &amp;&amp; touch ~/.config/vra+/config.yaml &amp;&amp; chmod 600 ~/.config/vra+/config.yaml</code></pre>
+<pre class="doc-code"><code><span class="c-dim"># ~/.config/vra+/config.yaml</span>
+github:
+  token: github_pat_xxxx
+gitlab:
+  token: glpat-xxxx
+  url: https://gitlab.com        <span class="c-dim"># self-managed: https://gitlab.company.com</span></code></pre>
+            <p><strong>Don't put a token in the repository's <code>vra.yaml</code></strong> — that file is meant to be committed.</p>
+            <p><strong>Which one wins</strong> (first found). GitHub: <code>github.token</code> (config file, overridden by <code>VRA__GITHUB__TOKEN</code>) → <code>GITHUB_TOKEN</code> → <code>GH_TOKEN</code> → your <code>gh</code> login → no-token mode. GitLab: <code>gitlab.token</code> (overridden by <code>VRA__GITLAB__TOKEN</code>) → <code>GITLAB_TOKEN</code> → no-token mode. GitHub or GitLab is picked from the <code>origin</code> remote.</p>
+          </div>
+        </details>
+
+        <details class="flag" id="token-check">
+          <summary><span class="flag__name">Check it works</span></summary>
+          <div class="flag__body">
+<pre class="doc-code"><code>vra --format json config | jq .auth   <span class="c-dim"># where each token comes from — never the token</span>
+<span class="c-dim"># { "github": "GITHUB_TOKEN", "gitlab": "none: --open-pr opens MRs through git push options" }</span>
+
+<span class="c-dim"># GitHub: prints the repository name, not "Bad credentials"</span>
+curl -s -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/OWNER/REPO | grep full_name
+
+<span class="c-dim"># GitLab: prints the project path (slash encoded as %2F)</span>
+curl -s -H "PRIVATE-TOKEN: $GITLAB_TOKEN" "https://gitlab.com/api/v4/projects/GROUP%2FPROJECT" | grep -o '"path_with_namespace":"[^"]*"'</code></pre>
+          </div>
+        </details>
+
+        <details class="flag" id="no-token-gitlab">
+          <summary><span class="flag__name">No token on GitLab: the push opens the MRs</span></summary>
+          <div class="flag__body">
+            <p>VRA+ pushes each branch on its own with <a href="https://docs.gitlab.com/user/project/push_options/" rel="noopener">git push options</a>, and GitLab creates the MR as the branch arrives — over SSH or HTTPS, with your own credentials:</p>
+<pre class="doc-code"><code>git push --force -o merge_request.create -o merge_request.target=main \
+  -o "merge_request.title=VRA+: fix 10 security findings" \
+  -o merge_request.label=security -o merge_request.remove_source_branch \
+  origin vra/remediate</code></pre>
+            <ul class="guide__list">
+              <li>One MR for <code>vra/remediate</code>, and one <strong>draft MR</strong> per <code>vra/needs-human/*</code> branch, targeting <code>vra/remediate</code>.</li>
+              <li>Title, target, labels and "delete source branch" are set. Push options can't carry multi-line text, so the description is one line pointing to the full text in <code>vra-reports/pr-&lt;branch&gt;.md</code> — paste it in if you want it on the MR.</li>
+              <li>An issue can't be opened by a push: VRA+ prints a link to GitLab's <strong>New issue</strong> form, filled in with the secrets issue.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="flag" id="no-token-github">
+          <summary><span class="flag__name">No token on GitHub: one click per PR</span></summary>
+          <div class="flag__body">
+            <p>GitHub can't open a PR from a push. VRA+ pushes the branches and prints a link per PR that opens GitHub's <strong>Open a pull request</strong> form with the title and labels filled in. A short description is in the link too; a long one stays in <code>vra-reports/pr-&lt;branch&gt;.md</code> and the form tells you which file to paste.</p>
+            <p><strong>Several PRs?</strong> A run makes at most one main PR plus one draft per fix that needs a human. They're printed numbered, main first:</p>
+<pre class="doc-code doc-code--tree"><code>No GitHub token — pushed 3 branch(es). Open each PR with one click (in this order):
+1. vra/remediate → main
+   https://github.com/acme/app/compare/main...vra%2Fremediate?expand=1&amp;title=…
+2. vra/needs-human/pyjwt → vra/remediate  — choose “Create draft pull request”
+   https://github.com/acme/app/compare/vra%2Fremediate...vra%2Fneeds-human%2Fpyjwt?expand=1&amp;title=…
+3. vra/needs-human/urllib3 → vra/remediate  — choose “Create draft pull request”
+   …</code></pre>
+            <ul class="guide__list">
+              <li>Click each link once. Drafts target <code>vra/remediate</code>, so each shows only its own change.</li>
+              <li>The next run force-pushes the same branches, so <strong>PRs you've opened update by themselves</strong>; only a new <code>vra/needs-human/*</code> branch prints a new link.</li>
+              <li><strong>What a token adds</strong> (both hosts): full descriptions kept current, the main PR linking its drafts, drafts closed once their fix passes, the secrets issue opened and updated for you, and CI.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
       <!-- ─── Quick start ─────────────────────────────────────────── -->
       <section class="doc-sec" id="quickstart">
         <h2>Quick start</h2>
@@ -87,8 +216,8 @@ vra remediate
 <span class="c-dim"># 3. Apply and verify each fix on a local branch (vra/remediate)</span>
 vra remediate --apply
 
-<span class="c-dim"># 4. Push and open the PR/MR, drafts and secrets issue (needs a token)</span>
-GITHUB_TOKEN=… vra remediate --open-pr</code></pre>
+<span class="c-dim"># 4. Push and open the PR/MR, drafts and secrets issue (token: see Step 1)</span>
+vra remediate --open-pr</code></pre>
       </section>
 
       <!-- ─── Command guides ───────────────────────────────────────── -->
@@ -253,7 +382,7 @@ git push --force origin 'refs/heads/vra/*:refs/heads/vra/*'   <span class="c-dim
               <h3>What happens, step by step</h3>
               <ol class="guide__steps">
                 <li><strong>Everything <code>--apply</code> does</strong> — the same isolated, verified, one-fix-at-a-time run.</li>
-                <li><strong>Finds your provider</strong> from the <code>origin</code> remote — GitHub, GitHub Enterprise (<code>github.url</code>), GitLab or self-managed GitLab (<code>gitlab.url</code>) — and a token: <code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code>, <code>GITLAB_TOKEN</code> / <code>CI_JOB_TOKEN</code>, or config. No token → it stops before pushing anything.</li>
+                <li><strong>Finds your provider</strong> from the <code>origin</code> remote — GitHub, GitHub Enterprise (<code>github.url</code>), GitLab or self-managed GitLab (<code>gitlab.url</code>) — and a token (<a href="#connect">Step 1</a>). No token on your machine → GitLab opens the MRs through the push; GitHub gets a one-click link per PR.</li>
                 <li><strong>Pushes the branches</strong> (<code>vra/remediate</code> and <code>vra/needs-human/*</code>, force-pushed because they're regenerated each run) with your own git credentials — SSH or HTTPS.</li>
                 <li><strong>Opens or updates the PR/MR</strong> from <code>vra/remediate</code> into the branch you ran it from, labelled <code>security</code>, <code>vra</code>. The description lists each fix, the CVEs it closes, how it was verified, and what deserves a closer review.</li>
                 <li><strong>Opens or updates a draft PR/MR</strong> for each fix that needs a human — based on the remediation branch, labelled <code>vra:needs-human</code>, with the failure output and what was tried — and links the drafts from the main PR/MR.</li>
@@ -271,10 +400,10 @@ git push --force origin 'refs/heads/vra/*:refs/heads/vra/*'   <span class="c-dim
               <h3>Good to know</h3>
               <ul class="guide__list">
                 <li><strong>Idempotent.</strong> Re-running updates the same PR/MR, drafts and issue — never duplicates.</li>
-                <li><strong>Token permissions:</strong> with an SSH remote, PR + issue write is enough (GitLab: <code>api</code>). In CI, where the token also pushes, add contents + workflows write (GitLab: <code>write_repository</code>).</li>
+                <li><strong>Tokens:</strong> how to create one, which permissions, and what happens without one — <a href="#connect">Step 1 · Connect</a>.</li>
                 <li>In GitHub Actions, use a personal or app token: PRs opened with the default <code>GITHUB_TOKEN</code> don't trigger your CI.</li>
               </ul>
-<pre class="doc-code"><code>GITHUB_TOKEN=… vra remediate --open-pr
+<pre class="doc-code"><code>vra remediate --open-pr
 vra remediate --open-pr || [ $? -eq 2 ]   <span class="c-dim"># in CI: "needs a human" isn't a failure</span></code></pre>
               <p class="guide__more"><a href="#ci-access">What access you need →</a></p>
             </div>
@@ -756,14 +885,11 @@ vra remediate --apply --verify-command "make ci"</code></pre>
               <thead><tr><th>You have</th><th>Plan</th><th><code>--apply</code></th><th><code>--open-pr</code></th></tr></thead>
               <tbody>
                 <tr><td>A clone (even read-only)</td><td>✅</td><td>✅ local commits</td><td>—</td></tr>
-                <tr><td>+ push access (SSH or HTTPS)</td><td>✅</td><td>✅ then push yourself</td><td>—</td></tr>
-                <tr><td>+ an API token</td><td>✅</td><td>✅</td><td>✅</td></tr>
+                <tr><td>+ push access (SSH or HTTPS), no token</td><td>✅</td><td>✅</td><td>✅ GitLab: MRs via push · GitHub: a link per PR</td></tr>
+                <tr><td>+ an API token</td><td>✅</td><td>✅</td><td>✅ everything, kept up to date</td></tr>
               </tbody>
             </table>
-            <p>Without a token, push the branches and open the PR/MR yourself:</p>
-<pre class="doc-code"><code>vra remediate --apply
-git push --force origin 'refs/heads/vra/*:refs/heads/vra/*'</code></pre>
-            <p><strong>Token permissions.</strong> With an SSH remote (push via your key): GitHub <em>Pull requests</em> + <em>Issues</em> read/write, or GitLab <code>api</code>. In CI, where the token also pushes: add <em>Contents</em> + <em>Workflows</em> (GitHub) or <code>write_repository</code> (GitLab).</p>
+            <p>Creating a token and the exact permissions: <a href="#connect">Step 1 · Connect</a>.</p>
           </div>
         </details>
 
@@ -805,7 +931,7 @@ vra remediate --open-pr || [ $? -eq 2 ]</code></pre>
       <!-- ─── vra config ───────────────────────────────────────────── -->
       <section class="doc-sec" id="config">
         <h2><code>vra config</code></h2>
-        <p>Print the effective configuration after merging the config file, environment variables and defaults. Tokens and keys are always shown as <code>***</code>, so it's safe to share.</p>
+        <p>Print the effective configuration after merging the config file, environment variables and defaults. Tokens and keys are always shown as <code>***</code>, so it's safe to share. The <code>auth</code> section says where each token comes from (<code>GITHUB_TOKEN</code>, your <code>gh</code> login, none…).</p>
 <p class="guide-link"><a href="#guide-config">vra config guide →</a></p>
 <pre class="doc-code"><code>vra config
 vra --format json config | jq .scanner   <span class="c-dim"># JSON only, script-friendly</span>
@@ -918,9 +1044,10 @@ export VRA__GITLAB__URL=https://gitlab.example.com</code></pre>
                   <tr><td><code>output.color</code></td><td><code>true</code></td><td>Coloured terminal output</td></tr>
                   <tr><td><code>output.verbose</code></td><td><code>false</code></td><td>Same as <code>--verbose</code></td></tr>
                   <tr><td><code>github.url</code></td><td><code>https://api.github.com</code></td><td>API base (GitHub Enterprise: <code>https://ghe.example.com/api/v3</code>)</td></tr>
-                  <tr><td><code>github.token</code></td><td>—</td><td>Falls back to <code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code></td></tr>
+                  <tr><td><code>github.token</code></td><td>—</td><td>Falls back to <code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code> / your <code>gh</code> login (<a href="#token-github">create one</a>)</td></tr>
+                  <tr><td><code>github.use_gh_login</code></td><td><code>true</code></td><td>With no token, reuse <code>gh auth login</code></td></tr>
                   <tr><td><code>gitlab.url</code></td><td><code>https://gitlab.com</code></td><td>Self-managed GitLab URL</td></tr>
-                  <tr><td><code>gitlab.token</code></td><td>—</td><td>Falls back to <code>GITLAB_TOKEN</code> / <code>CI_JOB_TOKEN</code></td></tr>
+                  <tr><td><code>gitlab.token</code></td><td>—</td><td>Falls back to <code>GITLAB_TOKEN</code>; optional locally — without it the push opens the MR (<a href="#token-gitlab">create one</a>)</td></tr>
                   <tr><td><code>gitlab.project_id</code></td><td>from remote</td><td>Override the detected project</td></tr>
                 </tbody>
               </table>
