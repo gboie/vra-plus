@@ -21,12 +21,6 @@ vra --version
 
 ## This repository
 
-It holds the website (served by GitHub Pages) and the release binaries. The VRA+ source code lives elsewhere.
+Release downloads only. Each VRA+ release publishes its binaries here; the source code and the website live elsewhere.
 
-| File | What |
-|---|---|
-| `index.html`, `style.css`, `main.js`, `assets/` | the website: plain HTML, CSS and JavaScript, no build step |
-| `CNAME` | custom domain for GitHub Pages |
-| `.nojekyll` | serve files as-is |
-
-Preview locally: `python3 -m http.server 8000`, then open http://localhost:8000.
+Documentation: https://vra-plus.io/docs.html
